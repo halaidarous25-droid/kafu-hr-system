@@ -1,9 +1,11 @@
 name: Supabase Keep-Alive
 
+# نبضة تلقائية تمنع مشروع Supabase المجاني من الدخول في سبات
+
 on:
+  workflow_dispatch: {}
   schedule:
     - cron: '0 6 */2 * *'
-  workflow_dispatch:
 
 jobs:
   ping:
