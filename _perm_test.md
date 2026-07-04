@@ -1,1 +1,0 @@
-# KAFU keepalive test
