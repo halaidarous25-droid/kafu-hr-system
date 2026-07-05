@@ -11155,7 +11155,7 @@ const AdminPortal = ({
   }, /*#__PURE__*/React.createElement(Stat, {
     icon: "\uD83D\uDC65",
     label: t.employees,
-    value: employees.filter(e => e.role === "employee").length,
+    value: employees.filter(e => e.role !== "admin").length,
     color: "#6366f1",
     glow: true
   }), /*#__PURE__*/React.createElement(Stat, {
@@ -11830,7 +11830,7 @@ const AdminPortal = ({
           onRun: onDeleteAllEvaluations },
         { key: "emps", icon: "👥",
           titleAr: "حذف جميع الموظفين", titleEn: "Delete All Employees",
-          count: employees.filter(e => e.role !== "admin" && e.role !== "coordinator").length,
+          count: employees.filter(e => e.role !== "admin").length,
           countLabelAr: "موظف", countLabelEn: "employees",
           onRun: onDeleteAllEmployees }
       ].map(card => /*#__PURE__*/React.createElement("div", {
@@ -12501,8 +12501,8 @@ function App() {
       lang === 'ar' ? 'تم حذف جميع التقييمات' : 'All evaluations deleted');
   };
   const deleteAllEmployees = () => {
-    // Keep only admin & coordinator accounts so the system stays accessible
-    setEmps(prev => prev.filter(e => e.role === 'admin' || e.role === 'coordinator'));
+    // Keep only admin accounts; coordinators are employees and get deleted too
+    setEmps(prev => prev.filter(e => e.role === 'admin'));
     addNotif('delete', lang === 'ar' ? 'حذف شامل' : 'Bulk delete',
       lang === 'ar' ? 'تم حذف جميع الموظفين' : 'All employees deleted');
   };
