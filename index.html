@@ -10282,9 +10282,9 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
 
   // ── EMPLOYEES ──
   const dlEmpTemplate = () => {
-    const headers = ["id", "nameAr", "nameEn", "email", "dept", "position", "hireDate(dd/mm/yyyy)", "nationality", "role", "username", "active"];
+    const headers = ["id", "nameAr", "nameEn", "email", "dept", "position", "hireDate(dd/mm/yyyy)", "role", "username", "active"];
     const sample = [
-      ["500001", "محمد العلي", "Mohammed Alali", "malali@mngha.med.sa", "HR", "Specialist", "01/03/2020", "سعودي", "employee", "moh001", "true"]
+      ["500001", "محمد العلي", "Mohammed Alali", "malali@mngha.med.sa", "HR", "Specialist", "01/03/2020", "employee", "moh001", "true"]
     ];
     downloadCSV("employees_template.csv", buildCSV(headers, sample));
   };
@@ -10316,7 +10316,6 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             dept: (r.dept || "").trim(),
             position: (r.position || "").trim(),
             hireDate: csvDateToISO(r["hireDate(dd/mm/yyyy)"] || r.hireDate || ""),
-            nationality: (r.nationality || "").trim(),
             evalYear: "",
             role: (r.role || "employee").trim(),
             username: uname,
@@ -10341,7 +10340,6 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             first_name_ar: emp.firstNameAr, first_name_en: emp.firstNameEn,
             email: emp.email, dept: emp.dept, position: emp.position,
             hire_date: emp.hireDate || null, eval_year: emp.evalYear || null,
-            nationality: emp.nationality || null,
             role: emp.role, password: emp.password,
             contract_end: emp.contractEnd || null, last_eval: emp.lastEval || null,
             is_active: emp.active, active: emp.active
@@ -12271,7 +12269,6 @@ function App() {
           password:e.password||'',isActive:e.is_active!==false&&e.active!==false,
           email:e.email||'',hireDate:e.hire_date||'',lastEval:e.last_eval||'',
           contractEnd:e.contract_end||'',evalYear:e.eval_year||'',
-          nationality:e.nationality||'',
         })));
         console.log('[KAFU] Loaded',emps.length,'employees from DB');
       }
