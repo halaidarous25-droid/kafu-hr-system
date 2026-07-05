@@ -10251,18 +10251,22 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         rows.forEach(r => {
           const empId = (r.empId || "").trim();
           if (!empId || !employees.find(x => x.id === empId)) { skipped++; return; }
+          const isoDate = csvDateToISO(r["date(dd/mm/yyyy)"] || r.date || "");
+          const evYr = evalYearForDate(isoDate, empId, evalDates, employees.find(x => x.id === empId));
           const ach = {
             id: Date.now() + Math.random(),
             empId,
             criteriaId: (r.criteriaId || "").trim(),
             subId: (r.subId || "").trim(),
             description: (r.description || "").trim(),
-            date: csvDateToISO(r["date(dd/mm/yyyy)"] || r.date || ""),
+            date: isoDate,
             role: (r.role || "Contributor").trim(),
             points: parseFloat(r.points) || 0,
             status: (r.status || "approved").trim(),
-            month: 1,
-            year: evalYearForDate(csvDateToISO(r["date(dd/mm/yyyy)"] || r.date || ""), empId, evalDates, employees.find(x => x.id === empId)),
+            month: isoDate ? (new Date(isoDate).getMonth() + 1) : 1,
+            year: evYr,
+            evalYear: evYr,
+            source: "import",
             attachment: "", rejectionReason: ""
           };
           if (addAch) addAch(ach); else if (onUpdate) onUpdate(ach.id, ach);
@@ -10278,9 +10282,9 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
 
   // ── EMPLOYEES ──
   const dlEmpTemplate = () => {
-    const headers = ["id", "nameAr", "nameEn", "email", "dept", "position", "hireDate(dd/mm/yyyy)", "role", "username", "active"];
+    const headers = ["id", "nameAr", "nameEn", "email", "dept", "position", "hireDate(dd/mm/yyyy)", "nationality", "role", "username", "active"];
     const sample = [
-      ["500001", "محمد أحمد العلي", "Mohammed Ahmed Alali", "malali@mngha.med.sa", "HR", "Specialist", "01/03/2020", "employee", "malali", "true"]
+      ["500001", "محمد العلي", "Mohammed Alali", "malali@mngha.med.sa", "HR", "Specialist", "01/03/2020", "سعودي", "employee", "moh001", "true"]
     ];
     downloadCSV("employees_template.csv", buildCSV(headers, sample));
   };
@@ -10294,19 +10298,28 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         rows.forEach(r => {
           const id = (r.id || "").trim();
           if (!id || employees.find(x => x.id === id) || newEmps.find(x => x.id === id)) { skipped++; return; }
+          const nmAr = (r.nameAr || "").trim();
+          const nmEn = (r.nameEn || "").trim();
+          let uname = (r.username || "").trim();
+          if (!uname) {
+            const first3 = (nmEn.split(" ")[0] || "").replace(/[^A-Za-z]/g, "").slice(0, 3).toLowerCase();
+            const last3 = id.replace(/[^0-9]/g, "").slice(-3);
+            uname = (first3 + last3) || id;
+          }
           newEmps.push({
             id,
-            nameAr: (r.nameAr || "").trim(),
-            nameEn: (r.nameEn || "").trim(),
-            firstNameAr: (r.nameAr || "").trim().split(" ")[0] || "",
-            firstNameEn: (r.nameEn || "").trim().split(" ")[0] || "",
+            nameAr: nmAr,
+            nameEn: nmEn,
+            firstNameAr: nmAr.split(" ")[0] || "",
+            firstNameEn: nmEn.split(" ")[0] || "",
             email: (r.email || "").trim(),
             dept: (r.dept || "").trim(),
             position: (r.position || "").trim(),
             hireDate: csvDateToISO(r["hireDate(dd/mm/yyyy)"] || r.hireDate || ""),
+            nationality: (r.nationality || "").trim(),
             evalYear: "",
             role: (r.role || "employee").trim(),
-            username: (r.username || "").trim(),
+            username: uname,
             password: "!!SET_REQUIRED!!",
             lastEval: "",
             contractEnd: "",
@@ -10328,6 +10341,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             first_name_ar: emp.firstNameAr, first_name_en: emp.firstNameEn,
             email: emp.email, dept: emp.dept, position: emp.position,
             hire_date: emp.hireDate || null, eval_year: emp.evalYear || null,
+            nationality: emp.nationality || null,
             role: emp.role, password: emp.password,
             contract_end: emp.contractEnd || null, last_eval: emp.lastEval || null,
             is_active: emp.active, active: emp.active
@@ -12314,14 +12328,16 @@ function App() {
 
   // DB actions
   const addAchDB=async(a)=>{
+    const st=a.status||'pending';
+    const mo=a.month||(a.date?(new Date(a.date).getMonth()+1):1);
     const saved=await sbPost('achievements',{
       emp_id:a.empId,criteria_id:a.criteriaId,sub_id:a.subId,
       description:a.description||'',date:a.date,role:a.role||'',
-      points:a.points||0,status:'pending',month:a.month,
+      points:a.points||0,status:st,month:mo,
       year:a.year||'',eval_year:a.evalYear||'',source:a.source||'manual',
       team_id:a.teamId||null,project_id:a.projectId||null,
     });
-    if(saved)setAchs(p=>[...p,{...a,id:String(saved.id),status:'pending',createdAt:saved.created_at}]);
+    if(saved)setAchs(p=>[...p,{...a,id:String(saved.id),status:st,createdAt:saved.created_at}]);
   };
   const updAchDB=async(id,u)=>{
     const row={};
@@ -12353,8 +12369,10 @@ function App() {
     setEvalDates(p=>p.map(e=>e.id===id?{...e,...u}:e));
   };
   const delEvalDateDB=async(id)=>{await sbDel('eval_dates',id);setEvalDates(p=>p.filter(e=>e.id!==id));};
-  const setExcelTeamsDB=async(ts)=>{
+  const setExcelTeamsDB=async(tsArg)=>{
+    const ts=typeof tsArg==='function'?tsArg(excelTeams):tsArg;
     setExcelTeams(ts);
+    if(!Array.isArray(ts))return;
     for(const t of ts){
       await sbPost('excellence_teams',{id:t.id,name_ar:t.nameAr,name_en:t.nameEn||t.nameAr,
         desc_ar:t.descAr||'',desc_en:t.descEn||'',lead_id:t.leadId||null,
@@ -12365,8 +12383,10 @@ function App() {
       }
     }
   };
-  const setExcelProjectsDB=async(ps)=>{
+  const setExcelProjectsDB=async(psArg)=>{
+    const ps=typeof psArg==='function'?psArg(excelProjects):psArg;
     setExcelProjects(ps);
+    if(!Array.isArray(ps))return;
     for(const p of ps){
       await sbPost('excellence_projects',{id:p.id,name_ar:p.nameAr,name_en:p.nameEn||p.nameAr,
         desc_ar:p.descAr||'',desc_en:p.descEn||'',status:p.status||'in_progress',
