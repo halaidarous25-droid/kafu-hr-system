@@ -10282,9 +10282,9 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
 
   // ── EMPLOYEES ──
   const dlEmpTemplate = () => {
-    const headers = ["id", "nameAr", "nameEn", "email", "dept", "position", "hireDate(dd/mm/yyyy)", "role", "username", "active"];
+    const headers = ["id", "nameAr", "nameEn", "email", "dept", "position", "hireDate(dd/mm/yyyy)", "evalYear", "role", "username", "lastEval(dd/mm/yyyy)", "contractEnd(dd/mm/yyyy)", "active"];
     const sample = [
-      ["500001", "محمد العلي", "Mohammed Alali", "malali@mngha.med.sa", "HR", "Specialist", "01/03/2020", "employee", "moh001", "true"]
+      ["500001", "محمد العلي", "Mohammed Alali", "malali@mngha.med.sa", "HR", "Specialist", "01/03/2020", "", "employee", "moh001", "", "", "true"]
     ];
     downloadCSV("employees_template.csv", buildCSV(headers, sample));
   };
@@ -10316,12 +10316,12 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             dept: (r.dept || "").trim(),
             position: (r.position || "").trim(),
             hireDate: csvDateToISO(r["hireDate(dd/mm/yyyy)"] || r.hireDate || ""),
-            evalYear: "",
+            evalYear: (r.evalYear || "").trim(),
             role: (r.role || "employee").trim(),
             username: uname,
             password: "!!SET_REQUIRED!!",
-            lastEval: "",
-            contractEnd: "",
+            lastEval: csvDateToISO(r["lastEval(dd/mm/yyyy)"] || r.lastEval || ""),
+            contractEnd: csvDateToISO(r["contractEnd(dd/mm/yyyy)"] || r.contractEnd || ""),
             active: String(r.active || "true").trim().toLowerCase() !== "false"
           });
           added++;
