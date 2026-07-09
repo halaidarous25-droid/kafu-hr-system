@@ -10181,6 +10181,35 @@ const downloadCSV = (filename, csvText) => {
 
 // Parse CSV text into array of row-objects keyed by header.
 // Handles quoted fields, embedded commas/newlines, and "" escapes.
+// Smart CSV reader: reads as UTF-8, auto-recovers if the file was saved as Windows-1256 (Arabic)
+const readCSVFile = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onerror = () => reject(new Error("read error"));
+  reader.onload = () => {
+    try {
+      const buf = reader.result; // ArrayBuffer
+      const bytes = new Uint8Array(buf);
+      // Try UTF-8 strict first
+      let text;
+      try {
+        text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      } catch (e) { text = ""; }
+      // Detect mojibake: UTF-8 Arabic mis-decoded shows chars like Ø Ù Ú, or replacement char
+      const looksBroken = /[\u00C0-\u00FF]{2,}/.test(text) && !/[\u0600-\u06FF]/.test(text);
+      const hasReplacement = text.indexOf("\uFFFD") !== -1;
+      if (looksBroken || hasReplacement) {
+        // Re-decode as Windows-1256 (Arabic legacy Excel encoding)
+        try {
+          const alt = new TextDecoder("windows-1256").decode(bytes);
+          if (/[\u0600-\u06FF]/.test(alt)) { resolve(alt); return; }
+        } catch (e) { /* fall through */ }
+      }
+      resolve(text);
+    } catch (err) { reject(err); }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
 const parseCSV = (text) => {
   if (!text) return [];
   let s = text.replace(/^\uFEFF/, ""); // strip BOM
@@ -10217,11 +10246,35 @@ const parseCSV = (text) => {
 // Convert dd/mm/yyyy or yyyy-mm-dd to ISO yyyy-mm-dd
 const csvDateToISO = (v) => {
   if (!v) return "";
-  const s = String(v).trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m) return m[3] + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0");
-  return s;
+  let s = String(v).trim();
+  if (!s) return "";
+  // Already ISO yyyy-mm-dd (possibly with swapped parts from bad import)
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    let y = m[1], a = parseInt(m[2], 10), b = parseInt(m[3], 10);
+    // If middle part > 12 it must be the day -> swap
+    if (a > 12 && b <= 12) { const t = a; a = b; b = t; }
+    if (a < 1 || a > 12 || b < 1 || b > 31) return "";
+    return y + "-" + String(a).padStart(2, "0") + "-" + String(b).padStart(2, "0");
+  }
+  // dd/mm/yyyy or mm/dd/yyyy or with - . separators
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (m) {
+    let d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = m[3];
+    // If first part > 12 it's clearly the day (dd/mm). If second > 12 it's the day (mm/dd) -> swap
+    if (mo > 12 && d <= 12) { const t = d; d = mo; mo = t; }
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+    return y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+  }
+  // yyyy/mm/dd
+  m = s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+  if (m) {
+    let y = m[1], mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+    if (mo > 12 && d <= 12) { const t = mo; mo = d; d = t; }
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+    return y + "-" + String(mo).padStart(2, "0") + "-" + String(d).padStart(2, "0");
+  }
+  return "";
 };
 
 
@@ -10243,10 +10296,10 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
     downloadCSV("achievements_template.csv", buildCSV(headers, sample));
   };
   const upAchFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
+    (async () => {
       try {
-        const rows = parseCSV(e.target.result);
+        const csvText = await readCSVFile(file);
+        const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
         rows.forEach(r => {
           const empId = (r.empId || "").trim();
@@ -10276,8 +10329,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
       } catch (err) {
         setImportMsg({ type: "error", text: isAr2 ? "❌ خطأ في قراءة الملف" : "❌ Error reading file" });
       }
-    };
-    reader.readAsText(file);
+    })();
   };
 
   // ── EMPLOYEES ──
@@ -10289,10 +10341,10 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
     downloadCSV("employees_template.csv", buildCSV(headers, sample));
   };
   const upEmpFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
+    (async () => {
       try {
-        const rows = parseCSV(e.target.result);
+        const csvText = await readCSVFile(file);
+        const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
         const newEmps = [];
         rows.forEach(r => {
@@ -10357,8 +10409,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         console.error('[KAFU] Employee import error:', err);
         setImportMsg({ type: "error", text: isAr2 ? "❌ خطأ في قراءة الملف أو الحفظ" : "❌ Error reading file or saving" });
       }
-    };
-    reader.readAsText(file);
+    })();
   };
 
   // ── EXCELLENCE TEAMS ──
@@ -10370,10 +10421,10 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
     downloadCSV("excellence_teams_template.csv", buildCSV(headers, sample));
   };
   const upTeamFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
+    (async () => {
       try {
-        const rows = parseCSV(e.target.result);
+        const csvText = await readCSVFile(file);
+        const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
         const newTeams = [];
         rows.forEach(r => {
@@ -10401,8 +10452,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
       } catch (err) {
         setImportMsg({ type: "error", text: isAr2 ? "❌ خطأ في قراءة الملف" : "❌ Error reading file" });
       }
-    };
-    reader.readAsText(file);
+    })();
   };
 
   // ── EXPORTS ──
@@ -10432,10 +10482,10 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
     downloadCSV("evaluations_template.csv", buildCSV(headers, sample));
   };
   const upEvalFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
+    (async () => {
       try {
-        const rows = parseCSV(e.target.result);
+        const csvText = await readCSVFile(file);
+        const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
         rows.forEach(r => {
           const empId = (r.empId || "").trim();
@@ -10460,8 +10510,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
       } catch (err) {
         setImportMsg({ type: "error", text: isAr2 ? "❌ خطأ في قراءة الملف" : "❌ Error reading file" });
       }
-    };
-    reader.readAsText(file);
+    })();
   };
   const exportEvaluations = () => {
     const headers = ["empId", "evalYear", "evalDate(dd/mm/yyyy)", "nextEval(dd/mm/yyyy)", "periodPoints", "notes"];
