@@ -10301,6 +10301,12 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         const csvText = await readCSVFile(file);
         const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
+        if (rows.length > 0) {
+          console.log('[KAFU-DIAG] عدد الصفوف:', rows.length);
+          console.log('[KAFU-DIAG] أسماء الأعمدة:', JSON.stringify(Object.keys(rows[0])));
+          console.log('[KAFU-DIAG] أول صف:', JSON.stringify(rows[0]));
+          console.log('[KAFU-DIAG] موظفون محمّلون:', employees.length, 'عينة:', JSON.stringify(employees.slice(0,3).map(e=>e.id)));
+        }
         const normId = (v) => String(v == null ? "" : v).replace(/[\u200e\u200f\u202a-\u202e]/g, "").replace(/[^0-9A-Za-z]/g, "").trim();
         const empIndex = {};
         employees.forEach(e => { empIndex[normId(e.id)] = e; });
