@@ -10301,12 +10301,13 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         const csvText = await readCSVFile(file);
         const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
+        const toSave = [];
         rows.forEach(r => {
           const empId = (r.empId || "").trim();
           if (!empId || !employees.find(x => x.id === empId)) { skipped++; return; }
           const isoDate = csvDateToISO(r["date(dd/mm/yyyy)"] || r.date || "");
           const evYr = evalYearForDate(isoDate, empId, evalDates, employees.find(x => x.id === empId));
-          const ach = {
+          toSave.push({
             id: Date.now() + Math.random(),
             empId,
             criteriaId: (r.criteriaId || "").trim(),
@@ -10321,12 +10322,22 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             evalYear: evYr,
             source: "import",
             attachment: "", rejectionReason: ""
-          };
-          if (addAch) addAch(ach); else if (onUpdate) onUpdate(ach.id, ach);
-          added++;
+          });
         });
-        setImportMsg({ type: "success", text: isAr2 ? `✅ تم استيراد ${added} إنجاز · تخطّي ${skipped}` : `✅ Imported ${added} · skipped ${skipped}` });
+        if (toSave.length === 0) {
+          setImportMsg({ type: "success", text: isAr2 ? `✅ تم استيراد 0 · تخطّي ${skipped}` : `✅ Imported 0 · skipped ${skipped}` });
+          return;
+        }
+        setImportMsg({ type: "info", text: isAr2 ? `⏳ جارٍ حفظ ${toSave.length} إنجاز في قاعدة البيانات...` : `⏳ Saving ${toSave.length} achievements...` });
+        for (const ach of toSave) {
+          try {
+            if (addAch) { await addAch(ach); added++; }
+            else if (onUpdate) { await onUpdate(ach.id, ach); added++; }
+          } catch (e) { skipped++; }
+        }
+        setImportMsg({ type: added === toSave.length ? "success" : "error", text: isAr2 ? `${added === toSave.length ? '✅' : '⚠️'} تم حفظ ${added} إنجاز في قاعدة البيانات · تخطّي ${skipped}` : `${added === toSave.length ? '✅' : '⚠️'} Saved ${added} achievements · skipped ${skipped}` });
       } catch (err) {
+        console.error('[KAFU] Achievement import error:', err);
         setImportMsg({ type: "error", text: isAr2 ? "❌ خطأ في قراءة الملف" : "❌ Error reading file" });
       }
     })();
@@ -12383,7 +12394,9 @@ function App() {
       year:a.year||'',eval_year:a.evalYear||'',source:a.source||'manual',
       team_id:a.teamId||null,project_id:a.projectId||null,
     });
-    if(saved)setAchs(p=>[...p,{...a,id:String(saved.id),status:st,createdAt:saved.created_at}]);
+    if(!saved)throw new Error('save failed');
+    setAchs(p=>[...p,{...a,id:String(saved.id),status:st,createdAt:saved.created_at}]);
+    return saved;
   };
   const updAchDB=async(id,u)=>{
     const row={};
