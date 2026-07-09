@@ -10338,7 +10338,18 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         for (const ach of toSave) {
           try {
             if (addAch) { await addAch(ach); added++; }
-            else if (onUpdate) { await onUpdate(ach.id, ach); added++; }
+            else {
+              const st = ach.status || 'pending';
+              const saved = await sbPost('achievements', {
+                emp_id: ach.empId, criteria_id: ach.criteriaId, sub_id: ach.subId,
+                description: ach.description || '', date: ach.date || null, role: ach.role || '',
+                points: ach.points || 0, status: st, month: ach.month || 1,
+                year: ach.year || '', eval_year: ach.evalYear || '', source: 'import',
+                team_id: null, project_id: null
+              });
+              if (!saved) throw new Error('save failed');
+              added++;
+            }
           } catch (e) { skipped++; }
         }
         setImportMsg({ type: added === toSave.length ? "success" : "error", text: isAr2 ? `${added === toSave.length ? '✅' : '⚠️'} تم حفظ ${added} إنجاز في قاعدة البيانات · تخطّي ${skipped}` : `${added === toSave.length ? '✅' : '⚠️'} Saved ${added} achievements · skipped ${skipped}` });
