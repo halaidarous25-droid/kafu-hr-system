@@ -10301,12 +10301,6 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         const csvText = await readCSVFile(file);
         const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
-        if (rows.length > 0) {
-          console.log('[KAFU-DIAG] عدد الصفوف:', rows.length);
-          console.log('[KAFU-DIAG] أسماء الأعمدة:', JSON.stringify(Object.keys(rows[0])));
-          console.log('[KAFU-DIAG] أول صف:', JSON.stringify(rows[0]));
-          console.log('[KAFU-DIAG] موظفون محمّلون:', employees.length, 'عينة:', JSON.stringify(employees.slice(0,3).map(e=>e.id)));
-        }
         const normId = (v) => String(v == null ? "" : v).replace(/[\u200e\u200f\u202a-\u202e]/g, "").replace(/[^0-9A-Za-z]/g, "").trim();
         const empIndex = {};
         employees.forEach(e => { empIndex[normId(e.id)] = e; });
@@ -10317,7 +10311,8 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
           const matchedEmp = empIndex[empKey];
           if (!empKey || !matchedEmp) { skipped++; return; }
           const empId = matchedEmp.id;
-          const isoDate = csvDateToISO(r["date(dd/mm/yyyy)"] || r.date || "");
+          const rawDate = r["date(dd/mm/yyyy)"] ?? r.date ?? r.Date ?? r["التاريخ"] ?? r.dateHijri ?? "";
+          const isoDate = csvDateToISO(rawDate);
           const evYr = evalYearForDate(isoDate, empId, evalDates, matchedEmp);
           toSave.push({
             id: Date.now() + Math.random(),
@@ -12412,7 +12407,7 @@ function App() {
     const mo=a.month||(a.date?(new Date(a.date).getMonth()+1):1);
     const saved=await sbPost('achievements',{
       emp_id:a.empId,criteria_id:a.criteriaId,sub_id:a.subId,
-      description:a.description||'',date:a.date,role:a.role||'',
+      description:a.description||'',date:(a.date||null),role:a.role||'',
       points:a.points||0,status:st,month:mo,
       year:a.year||'',eval_year:a.evalYear||'',source:a.source||'manual',
       team_id:a.teamId||null,project_id:a.projectId||null,
