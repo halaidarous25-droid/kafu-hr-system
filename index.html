@@ -10301,17 +10301,23 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         const csvText = await readCSVFile(file);
         const rows = parseCSV(csvText);
         let added = 0, skipped = 0;
+        const normId = (v) => String(v == null ? "" : v).replace(/[\u200e\u200f\u202a-\u202e]/g, "").replace(/[^0-9A-Za-z]/g, "").trim();
+        const empIndex = {};
+        employees.forEach(e => { empIndex[normId(e.id)] = e; });
         const toSave = [];
         rows.forEach(r => {
-          const empId = (r.empId || "").trim();
-          if (!empId || !employees.find(x => x.id === empId)) { skipped++; return; }
+          const rawEmp = r.empId ?? r.EmpId ?? r.empid ?? r.emp_id ?? r["رقم الموظف"] ?? r.id ?? r.ID ?? "";
+          const empKey = normId(rawEmp);
+          const matchedEmp = empIndex[empKey];
+          if (!empKey || !matchedEmp) { skipped++; return; }
+          const empId = matchedEmp.id;
           const isoDate = csvDateToISO(r["date(dd/mm/yyyy)"] || r.date || "");
-          const evYr = evalYearForDate(isoDate, empId, evalDates, employees.find(x => x.id === empId));
+          const evYr = evalYearForDate(isoDate, empId, evalDates, matchedEmp);
           toSave.push({
             id: Date.now() + Math.random(),
             empId,
-            criteriaId: (r.criteriaId || "").trim(),
-            subId: (r.subId || "").trim(),
+            criteriaId: (r.criteriaId || r.criteria_id || "").trim(),
+            subId: (r.subId || r.sub_id || "").trim(),
             description: (r.description || "").trim(),
             date: isoDate,
             role: (r.role || "Contributor").trim(),
