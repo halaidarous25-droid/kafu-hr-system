@@ -9024,7 +9024,8 @@ const CoordinatorPortal = ({
     id: "evaldates",
     label: t.evalDates,
     icon: "📅"
-  }, { id: "excellence", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" }];
+  }, { id: "excellence", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" },
+  { id: "reportsAdmin", label: lang === "ar" ? "التقارير" : "Reports", icon: "📊" }];
   const EmpCard = ({
     emp
   }) => {
@@ -10204,7 +10205,15 @@ const CoordinatorPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd })
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
+    tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
+      achievements: achievements,
+      employees: employees,
+      criteria: criteria,
+      lang: lang,
+      th: th,
+      t: t
+    })
   );
 };
 
@@ -10373,6 +10382,234 @@ const csvDateToISO = (v) => {
 // ══════════════════════════════════════════════════════════════
 // SHARED IMPORT/EXPORT PANEL (used by Admin + Coordinator)
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// REPORTS PANEL (Admin + Coordinator) — yearly reports + charts
+// ══════════════════════════════════════════════════════════════
+const ReportsPanel = ({ achievements, employees, criteria, lang, th, t }) => {
+  const isAr = lang === "ar";
+  const [calYear, setCalYear] = React.useState(new Date().getFullYear().toString());
+  const [chartsOpen, setChartsOpen] = React.useState(false);
+  const [deptFilter, setDeptFilter] = React.useState("all");
+
+  const emps = employees.filter(e => e.role !== "admin");
+  const years = Array.from(new Set(achievements.map(a => (a.date || "").slice(0, 4)).filter(Boolean))).sort().reverse();
+  const yearAchs = achievements.filter(a => (a.date || "").slice(0, 4) === calYear);
+  const scoped = deptFilter === "all" ? yearAchs : yearAchs.filter(a => {
+    const e = emps.find(x => x.id === a.empId);
+    return e && e.dept === deptFilter;
+  });
+  const approved = scoped.filter(a => a.status === "approved");
+  const depts = Array.from(new Set(emps.map(e => e.dept).filter(Boolean)));
+
+  // Per-employee rows
+  const rows = emps.map(e => {
+    const mine = scoped.filter(a => a.empId === e.id);
+    const ap = mine.filter(a => a.status === "approved");
+    return {
+      id: e.id,
+      name: isAr ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr),
+      dept: e.dept || "-",
+      total: mine.length,
+      approved: ap.length,
+      pending: mine.filter(a => a.status === "pending").length,
+      rejected: mine.filter(a => a.status === "rejected").length,
+      points: ap.reduce((s, a) => s + (a.points || 0), 0)
+    };
+  }).filter(r => r.total > 0).sort((a, b) => b.points - a.points);
+
+  // Charts data
+  const byMonth = Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    const ms = approved.filter(a => a.date && (new Date(a.date).getMonth() + 1) === m);
+    return {
+      name: isAr ? ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"][i]
+                 : ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i],
+      count: ms.length,
+      points: ms.reduce((s, a) => s + (a.points || 0), 0)
+    };
+  });
+  const byDept = depts.map(d => {
+    const ids = emps.filter(e => e.dept === d).map(e => e.id);
+    const ds = approved.filter(a => ids.includes(a.empId));
+    return { name: d, count: ds.length, points: ds.reduce((s, a) => s + (a.points || 0), 0) };
+  }).sort((a, b) => b.points - a.points).slice(0, 8);
+  const byStatus = [
+    { name: isAr ? "معتمدة" : "Approved", value: scoped.filter(a => a.status === "approved").length, color: "#10b981" },
+    { name: isAr ? "معلّقة" : "Pending", value: scoped.filter(a => a.status === "pending").length, color: "#f59e0b" },
+    { name: isAr ? "مرفوضة" : "Rejected", value: scoped.filter(a => a.status === "rejected").length, color: "#ef4444" }
+  ].filter(s => s.value > 0);
+  const byCrit = criteria.map(c => {
+    const cs = approved.filter(a => a.criteriaId === c.id);
+    return { name: isAr ? (c.nameAr || c.id) : (c.nameEn || c.id), count: cs.length, points: cs.reduce((s, a) => s + (a.points || 0), 0) };
+  }).filter(c => c.count > 0).sort((a, b) => b.points - a.points);
+
+  const sel = {
+    background: th.input, border: `1px solid ${th.inputBorder}`, color: th.text,
+    borderRadius: 8, padding: "5px 10px", fontSize: 12
+  };
+  const exportReport = () => {
+    const headers = ["empId", isAr ? "الاسم" : "Name", isAr ? "الإدارة" : "Dept", isAr ? "إجمالي" : "Total",
+                     isAr ? "معتمدة" : "Approved", isAr ? "معلّقة" : "Pending", isAr ? "مرفوضة" : "Rejected", isAr ? "النقاط" : "Points"];
+    const data = rows.map(r => [r.id, r.name, r.dept, r.total, r.approved, r.pending, r.rejected, r.points]);
+    downloadCSV(`report_${calYear}.csv`, buildCSV(headers, data));
+  };
+
+  return /*#__PURE__*/React.createElement("div", null,
+    // Header + filters
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 10 }
+    },
+      /*#__PURE__*/React.createElement("h2", { style: { fontSize: 17, fontWeight: 900, color: th.text } },
+        (isAr ? "📊 التقارير — " : "📊 Reports — ") + calYear),
+      /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+        /*#__PURE__*/React.createElement("select", {
+          value: calYear, onChange: e => setCalYear(e.target.value), style: sel
+        }, years.length ? years.map(y => /*#__PURE__*/React.createElement("option", { key: y, value: y }, y))
+                        : /*#__PURE__*/React.createElement("option", { value: calYear }, calYear)),
+        /*#__PURE__*/React.createElement("select", {
+          value: deptFilter, onChange: e => setDeptFilter(e.target.value), style: sel
+        }, /*#__PURE__*/React.createElement("option", { value: "all" }, isAr ? "كل الإدارات" : "All departments"),
+           depts.map(d => /*#__PURE__*/React.createElement("option", { key: d, value: d }, d))),
+        /*#__PURE__*/React.createElement("button", {
+          onClick: exportReport,
+          style: { background: "#10b981", color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }
+        }, isAr ? "📥 تصدير CSV" : "📥 Export CSV")
+      )
+    ),
+    // Summary cards
+    /*#__PURE__*/React.createElement("div", {
+      style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 18 }
+    },
+      [
+        { l: isAr ? "الإنجازات" : "Achievements", v: scoped.length, c: "#6366f1" },
+        { l: isAr ? "معتمدة" : "Approved", v: approved.length, c: "#10b981" },
+        { l: isAr ? "النقاط" : "Points", v: approved.reduce((s, a) => s + (a.points || 0), 0), c: "#ec4899" },
+        { l: isAr ? "موظفون نشطون" : "Active employees", v: rows.length, c: "#f59e0b" },
+        { l: isAr ? "الإدارات" : "Departments", v: depts.length, c: "#06b6d4" }
+      ].map((s, i) => /*#__PURE__*/React.createElement("div", {
+        key: i,
+        style: { border: `1px solid ${s.c}40`, background: `${s.c}10`, borderRadius: 12, padding: "14px 12px", textAlign: "center" }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 22, fontWeight: 900, color: s.c } }, s.v),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: th.textMuted, marginTop: 4 } }, s.l)
+      ))
+    ),
+    // Collapsible charts
+    /*#__PURE__*/React.createElement("div", {
+      style: { border: `1px solid ${th.border}`, borderRadius: 12, marginBottom: 18, overflow: "hidden" }
+    },
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => setChartsOpen(o => !o),
+        style: { width: "100%", background: th.card, border: "none", color: th.text, padding: "14px 16px", fontSize: 14, fontWeight: 800, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }
+      },
+        /*#__PURE__*/React.createElement("span", null, isAr ? "📈 الرسوم البيانية" : "📈 Charts"),
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 16 } }, chartsOpen ? "▲" : "▼")
+      ),
+      chartsOpen && /*#__PURE__*/React.createElement("div", { style: { padding: 16, display: "grid", gap: 22 } },
+        // Monthly
+        /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("h4", { style: { fontSize: 13, color: th.text, marginBottom: 10 } },
+            isAr ? "الإنجازات والنقاط شهرياً" : "Achievements & points by month"),
+          /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, { width: "100%", height: 240 },
+            /*#__PURE__*/React.createElement(Recharts.BarChart, { data: byMonth },
+              /*#__PURE__*/React.createElement(Recharts.CartesianGrid, { strokeDasharray: "3 3", stroke: th.border }),
+              /*#__PURE__*/React.createElement(Recharts.XAxis, { dataKey: "name", tick: { fill: th.textMuted, fontSize: 10 } }),
+              /*#__PURE__*/React.createElement(Recharts.YAxis, { tick: { fill: th.textMuted, fontSize: 10 } }),
+              /*#__PURE__*/React.createElement(Recharts.Tooltip, { contentStyle: { background: th.card, border: `1px solid ${th.border}`, color: th.text, fontSize: 12 } }),
+              /*#__PURE__*/React.createElement(Recharts.Legend, { wrapperStyle: { fontSize: 11 } }),
+              /*#__PURE__*/React.createElement(Recharts.Bar, { dataKey: "count", name: isAr ? "الإنجازات" : "Achievements", fill: "#6366f1", radius: [4, 4, 0, 0] }),
+              /*#__PURE__*/React.createElement(Recharts.Bar, { dataKey: "points", name: isAr ? "النقاط" : "Points", fill: "#ec4899", radius: [4, 4, 0, 0] })
+            )
+          )
+        ),
+        // By department
+        byDept.length > 0 && /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("h4", { style: { fontSize: 13, color: th.text, marginBottom: 10 } },
+            isAr ? "النقاط حسب الإدارة" : "Points by department"),
+          /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, { width: "100%", height: 240 },
+            /*#__PURE__*/React.createElement(Recharts.BarChart, { data: byDept, layout: "vertical" },
+              /*#__PURE__*/React.createElement(Recharts.CartesianGrid, { strokeDasharray: "3 3", stroke: th.border }),
+              /*#__PURE__*/React.createElement(Recharts.XAxis, { type: "number", tick: { fill: th.textMuted, fontSize: 10 } }),
+              /*#__PURE__*/React.createElement(Recharts.YAxis, { type: "category", dataKey: "name", width: 110, tick: { fill: th.textMuted, fontSize: 10 } }),
+              /*#__PURE__*/React.createElement(Recharts.Tooltip, { contentStyle: { background: th.card, border: `1px solid ${th.border}`, color: th.text, fontSize: 12 } }),
+              /*#__PURE__*/React.createElement(Recharts.Bar, { dataKey: "points", name: isAr ? "النقاط" : "Points", fill: "#10b981", radius: [0, 4, 4, 0] })
+            )
+          )
+        ),
+        // Status pie
+        byStatus.length > 0 && /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("h4", { style: { fontSize: 13, color: th.text, marginBottom: 10 } },
+            isAr ? "توزيع الحالات" : "Status distribution"),
+          /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, { width: "100%", height: 230 },
+            /*#__PURE__*/React.createElement(Recharts.PieChart, null,
+              /*#__PURE__*/React.createElement(Recharts.Pie, {
+                data: byStatus, dataKey: "value", nameKey: "name", cx: "50%", cy: "50%", outerRadius: 80, label: true
+              }, byStatus.map((s, i) => /*#__PURE__*/React.createElement(Recharts.Cell, { key: i, fill: s.color }))),
+              /*#__PURE__*/React.createElement(Recharts.Tooltip, { contentStyle: { background: th.card, border: `1px solid ${th.border}`, color: th.text, fontSize: 12 } }),
+              /*#__PURE__*/React.createElement(Recharts.Legend, { wrapperStyle: { fontSize: 11 } })
+            )
+          )
+        ),
+        // By criteria
+        byCrit.length > 0 && /*#__PURE__*/React.createElement("div", null,
+          /*#__PURE__*/React.createElement("h4", { style: { fontSize: 13, color: th.text, marginBottom: 10 } },
+            isAr ? "النقاط حسب المعيار" : "Points by criteria"),
+          /*#__PURE__*/React.createElement(Recharts.ResponsiveContainer, { width: "100%", height: 240 },
+            /*#__PURE__*/React.createElement(Recharts.BarChart, { data: byCrit, layout: "vertical" },
+              /*#__PURE__*/React.createElement(Recharts.CartesianGrid, { strokeDasharray: "3 3", stroke: th.border }),
+              /*#__PURE__*/React.createElement(Recharts.XAxis, { type: "number", tick: { fill: th.textMuted, fontSize: 10 } }),
+              /*#__PURE__*/React.createElement(Recharts.YAxis, { type: "category", dataKey: "name", width: 130, tick: { fill: th.textMuted, fontSize: 9 } }),
+              /*#__PURE__*/React.createElement(Recharts.Tooltip, { contentStyle: { background: th.card, border: `1px solid ${th.border}`, color: th.text, fontSize: 12 } }),
+              /*#__PURE__*/React.createElement(Recharts.Bar, { dataKey: "points", name: isAr ? "النقاط" : "Points", fill: "#f59e0b", radius: [0, 4, 4, 0] })
+            )
+          )
+        )
+      )
+    ),
+    // Employee report table
+    /*#__PURE__*/React.createElement("div", {
+      style: { border: `1px solid ${th.border}`, borderRadius: 12, overflow: "hidden" }
+    },
+      /*#__PURE__*/React.createElement("div", {
+        style: { background: th.card, padding: "12px 16px", fontSize: 14, fontWeight: 800, color: th.text }
+      }, (isAr ? "تقرير الموظفين (" : "Employee report (") + rows.length + ")"),
+      /*#__PURE__*/React.createElement("div", { style: { overflowX: "auto" } },
+        /*#__PURE__*/React.createElement("table", { style: { width: "100%", borderCollapse: "collapse", fontSize: 12 } },
+          /*#__PURE__*/React.createElement("thead", null,
+            /*#__PURE__*/React.createElement("tr", { style: { background: th.input } },
+              [isAr ? "الرقم" : "ID", isAr ? "الاسم" : "Name", isAr ? "الإدارة" : "Dept",
+               isAr ? "إجمالي" : "Total", isAr ? "معتمدة" : "Approved", isAr ? "معلّقة" : "Pending",
+               isAr ? "مرفوضة" : "Rejected", isAr ? "النقاط" : "Points"].map((h, i) =>
+                /*#__PURE__*/React.createElement("th", {
+                  key: i,
+                  style: { padding: "10px 8px", textAlign: isAr ? "right" : "left", color: th.textMuted, fontWeight: 700, whiteSpace: "nowrap" }
+                }, h))
+            )
+          ),
+          /*#__PURE__*/React.createElement("tbody", null,
+            rows.map((r, i) => /*#__PURE__*/React.createElement("tr", {
+              key: r.id,
+              style: { borderTop: `1px solid ${th.border}` }
+            },
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: th.textMuted } }, r.id),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: th.text, fontWeight: 600 } }, r.name),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: th.textMuted } }, r.dept),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: th.text } }, r.total),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#10b981", fontWeight: 700 } }, r.approved),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#f59e0b" } }, r.pending),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#ef4444" } }, r.rejected),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#ec4899", fontWeight: 900 } }, r.points)
+            ))
+          )
+        )
+      ),
+      rows.length === 0 && /*#__PURE__*/React.createElement("div", {
+        style: { padding: 30, textAlign: "center", color: th.textMuted, fontSize: 13 }
+      }, isAr ? "لا توجد بيانات لهذه السنة" : "No data for this year")
+    )
+  );
+};
+
 const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUpdate,
   excelTeams, setExcelTeams, evalDates = [], onAddEvalDate = () => {}, lang, theme: th }) => {
   const [importMsg, setImportMsg] = React.useState(null);
@@ -10953,6 +11190,7 @@ const AdminPortal = ({
     label: t.evalDates,
     icon: "📅"
   }, { id: "excellence", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" },
+  { id: "reportsAdmin", label: lang === "ar" ? "التقارير" : "Reports", icon: "📊" },
   { id: "import", label: lang === "ar" ? "استيراد/تصدير" : "Import/Export", icon: "📥" },
   { id: "settings", label: lang === "ar" ? "الإعدادات" : "Settings", icon: "⚙️" }];
   const EmpCard = ({
@@ -12033,6 +12271,14 @@ const AdminPortal = ({
       achievements: achievements, employees: employees, setEmployees: setEmployees,
       addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeams,
       evalDates: evalDates, onAddEvalDate: onAddEvalDate, lang: lang, theme: th
+    }),
+    tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
+      achievements: achievements,
+      employees: employees,
+      criteria: criteria,
+      lang: lang,
+      th: th,
+      t: t
     }),
     tab === "settings" && /*#__PURE__*/React.createElement("div", null,
       /*#__PURE__*/React.createElement("h2", {
