@@ -10331,6 +10331,10 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
           const empId = matchedEmp.id;
           const rawDate = r["date(dd/mm/yyyy)"] ?? r.date ?? r.Date ?? r["التاريخ"] ?? r.dateHijri ?? "";
           const isoDate = csvDateToISO(rawDate);
+          if (skipped + toSave.length < 3) {
+            console.log('[KAFU-DATE] أعمدة الملف:', JSON.stringify(Object.keys(r)));
+            console.log('[KAFU-DATE] التاريخ الخام:', JSON.stringify(rawDate), '→ محوّل:', JSON.stringify(isoDate));
+          }
           const evYr = evalYearForDate(isoDate, empId, evalDates, matchedEmp);
           toSave.push({
             id: Date.now() + Math.random(),
