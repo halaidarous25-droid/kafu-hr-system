@@ -12764,6 +12764,9 @@ const Login = ({
   const [id, setId] = useState("");
   const [pwd, setPwd] = useState("");
   const [err, setErr] = useState("");
+  const [mustChangeUser, setMustChangeUser] = useState(null);
+  const [forcePwd, setForcePwd] = useState({ next: "", confirm: "" });
+  const [forceMsg, setForceMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [failCount, setFailCount] = useState(0);
@@ -12806,7 +12809,16 @@ const Login = ({
           setErr(lang === "ar" ? "⚠️ يجب تغيير كلمة المرور قبل الدخول. تواصل مع المنسق." : "⚠️ Password change required. Contact coordinator.");
           setLoading(false); return;
         }
-        onLogin(e);
+        // SECURITY: force change if still using the default password
+        hashPw("emp123", e.id).then(defHash => {
+          if (e.password === defHash && e.role !== "admin") {
+            setMustChangeUser(e);
+            setLoading(false);
+            return;
+          }
+          onLogin(e);
+        });
+        return;
       } else {
         const newFail = failCount + 1;
         setFailCount(newFail);
@@ -12824,6 +12836,99 @@ const Login = ({
   };
   const demo = employees.filter(e => ["400122", "400592", "402278", "403527"].includes(e.id));
   const dir = t.dir;
+  // ── FORCED PASSWORD CHANGE (default password still in use) ──
+  if (mustChangeUser) {
+    const submitForce = () => {
+      setForceMsg("");
+      const np = forcePwd.next || "";
+      if (np.length < 8) {
+        setForceMsg(lang === "ar" ? "كلمة المرور يجب أن تكون 8 أحرف على الأقل" : "Password must be at least 8 characters");
+        return;
+      }
+      if (!/[A-Za-z]/.test(np) || !/[0-9]/.test(np)) {
+        setForceMsg(lang === "ar" ? "يجب أن تحتوي على حروف وأرقام" : "Must contain letters and numbers");
+        return;
+      }
+      if (np !== forcePwd.confirm) {
+        setForceMsg(lang === "ar" ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
+        return;
+      }
+      hashPw("emp123", mustChangeUser.id).then(defHash => {
+        if (np === "emp123") {
+          setForceMsg(lang === "ar" ? "لا يمكن استخدام كلمة المرور الافتراضية" : "Cannot reuse the default password");
+          return;
+        }
+        hashPw(np, mustChangeUser.id).then(hashed => {
+          if (onUpdateEmployee) onUpdateEmployee(mustChangeUser.id, { password: hashed });
+          const updated = Object.assign({}, mustChangeUser, { password: hashed });
+          setMustChangeUser(null);
+          setForcePwd({ next: "", confirm: "" });
+          onLogin(updated);
+        });
+      });
+    };
+    const inp = {
+      width: "100%", background: theme.input, border: "1px solid " + theme.inputBorder,
+      color: theme.text, borderRadius: 10, padding: "12px 14px", fontSize: 14,
+      fontFamily: "inherit", marginBottom: 10, boxSizing: "border-box"
+    };
+    return React.createElement("div", {
+      style: {
+        minHeight: "100vh", background: theme.bg, display: "flex", alignItems: "center",
+        justifyContent: "center", padding: 20, direction: dir, color: theme.text
+      }
+    }, React.createElement("div", {
+      style: {
+        background: theme.card, border: "2px solid #f59e0b", borderRadius: 18,
+        padding: 28, width: "100%", maxWidth: 420
+      }
+    },
+      React.createElement("div", { style: { fontSize: 36, textAlign: "center", marginBottom: 10 } }, "🔐"),
+      React.createElement("h2", {
+        style: { fontSize: 18, fontWeight: 900, textAlign: "center", marginBottom: 8, color: theme.text }
+      }, lang === "ar" ? "تغيير كلمة المرور مطلوب" : "Password change required"),
+      React.createElement("p", {
+        style: { fontSize: 12, color: theme.textMuted, textAlign: "center", marginBottom: 20, lineHeight: 1.6 }
+      }, lang === "ar"
+          ? "لأسباب أمنية، يجب تغيير كلمة المرور الافتراضية قبل الدخول."
+          : "For security, you must change the default password before continuing."),
+      React.createElement("input", {
+        type: "password",
+        value: forcePwd.next,
+        onChange: e => setForcePwd(p => Object.assign({}, p, { next: e.target.value })),
+        placeholder: lang === "ar" ? "كلمة المرور الجديدة (8+ أحرف وأرقام)" : "New password (8+ chars, letters+numbers)",
+        style: inp
+      }),
+      React.createElement("input", {
+        type: "password",
+        value: forcePwd.confirm,
+        onChange: e => setForcePwd(p => Object.assign({}, p, { confirm: e.target.value })),
+        placeholder: lang === "ar" ? "تأكيد كلمة المرور" : "Confirm password",
+        onKeyDown: e => { if (e.key === "Enter") submitForce(); },
+        style: inp
+      }),
+      forceMsg && React.createElement("div", {
+        style: { color: "#ef4444", fontSize: 12, marginBottom: 10, textAlign: "center" }
+      }, forceMsg),
+      React.createElement("button", {
+        onClick: submitForce,
+        style: {
+          width: "100%", background: "linear-gradient(135deg,#f59e0b,#ec4899)", color: "#fff",
+          border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 800,
+          cursor: "pointer", fontFamily: "inherit", marginBottom: 8
+        }
+      }, lang === "ar" ? "حفظ والدخول" : "Save & continue"),
+      React.createElement("button", {
+        onClick: () => { setMustChangeUser(null); setForcePwd({ next: "", confirm: "" }); setForceMsg(""); },
+        style: {
+          width: "100%", background: "transparent", color: theme.textMuted,
+          border: "1px solid " + theme.border, borderRadius: 10, padding: "10px",
+          fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+        }
+      }, lang === "ar" ? "إلغاء" : "Cancel")
+    ));
+  }
+
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
