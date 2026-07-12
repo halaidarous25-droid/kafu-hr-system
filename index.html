@@ -10217,6 +10217,18 @@ const readCSVFile = (file) => new Promise((resolve, reject) => {
 const parseCSV = (text) => {
   if (!text) return [];
   let s = text.replace(/^\uFEFF/, ""); // strip BOM
+  // Auto-detect delimiter from the header line: comma, tab, or semicolon
+  const firstLine = s.split(/\r?\n/)[0] || "";
+  const counts = { ",": 0, "\t": 0, ";": 0 };
+  let inQ = false;
+  for (let i = 0; i < firstLine.length; i++) {
+    const c = firstLine[i];
+    if (c === '"') inQ = !inQ;
+    else if (!inQ && counts[c] !== undefined) counts[c]++;
+  }
+  let DELIM = ",";
+  if (counts["\t"] > counts[","] && counts["\t"] >= counts[";"]) DELIM = "\t";
+  else if (counts[";"] > counts[","] && counts[";"] > counts["\t"]) DELIM = ";";
   const rows = [];
   let field = "", row = [], inQuotes = false;
   for (let i = 0; i < s.length; i++) {
@@ -10228,7 +10240,7 @@ const parseCSV = (text) => {
       } else field += ch;
     } else {
       if (ch === '"') inQuotes = true;
-      else if (ch === ",") { row.push(field); field = ""; }
+      else if (ch === DELIM) { row.push(field); field = ""; }
       else if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
       else if (ch === "\r") { /* skip */ }
       else field += ch;
@@ -10331,10 +10343,6 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
           const empId = matchedEmp.id;
           const rawDate = r["date(dd/mm/yyyy)"] ?? r.date ?? r.Date ?? r["التاريخ"] ?? r.dateHijri ?? "";
           const isoDate = csvDateToISO(rawDate);
-          if (skipped + toSave.length < 3) {
-            console.log('[KAFU-DATE] أعمدة الملف:', JSON.stringify(Object.keys(r)));
-            console.log('[KAFU-DATE] التاريخ الخام:', JSON.stringify(rawDate), '→ محوّل:', JSON.stringify(isoDate));
-          }
           const evYr = evalYearForDate(isoDate, empId, evalDates, matchedEmp);
           toSave.push({
             id: Date.now() + Math.random(),
