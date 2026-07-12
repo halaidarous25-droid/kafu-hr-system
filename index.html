@@ -8932,7 +8932,8 @@ const CoordinatorPortal = ({
   const pending = achievements.filter(a => a.status === "pending");
   const allApproved = achievements.filter(a => a.status === "approved");
   const CY = new Date().getFullYear().toString();
-  const cyApproved = allApproved.filter(a => yearToCalYear(a.year) === CY);
+  const inCY = a => (a.date || "").slice(0, 4) === CY;
+  const cyApproved = allApproved.filter(inCY);
   const top5 = Object.entries(cyApproved.reduce((acc, a) => {
     acc[a.empId] = (acc[a.empId] || 0) + a.points;
     return acc;
@@ -10390,6 +10391,7 @@ const ReportsPanel = ({ achievements, employees, criteria, lang, th, t }) => {
   const [calYear, setCalYear] = React.useState(new Date().getFullYear().toString());
   const [chartsOpen, setChartsOpen] = React.useState(false);
   const [deptFilter, setDeptFilter] = React.useState("all");
+  const [empReport, setEmpReport] = React.useState(null);
 
   const emps = employees.filter(e => e.role !== "admin");
   const years = Array.from(new Set(achievements.map(a => (a.date || "").slice(0, 4)).filter(Boolean))).sort().reverse();
@@ -10579,7 +10581,7 @@ const ReportsPanel = ({ achievements, employees, criteria, lang, th, t }) => {
             /*#__PURE__*/React.createElement("tr", { style: { background: th.input } },
               [isAr ? "الرقم" : "ID", isAr ? "الاسم" : "Name", isAr ? "الإدارة" : "Dept",
                isAr ? "إجمالي" : "Total", isAr ? "معتمدة" : "Approved", isAr ? "معلّقة" : "Pending",
-               isAr ? "مرفوضة" : "Rejected", isAr ? "النقاط" : "Points"].map((h, i) =>
+               isAr ? "مرفوضة" : "Rejected", isAr ? "النقاط" : "Points", isAr ? "التقرير" : "Report"].map((h, i) =>
                 /*#__PURE__*/React.createElement("th", {
                   key: i,
                   style: { padding: "10px 8px", textAlign: isAr ? "right" : "left", color: th.textMuted, fontWeight: 700, whiteSpace: "nowrap" }
@@ -10598,7 +10600,13 @@ const ReportsPanel = ({ achievements, employees, criteria, lang, th, t }) => {
               /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#10b981", fontWeight: 700 } }, r.approved),
               /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#f59e0b" } }, r.pending),
               /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#ef4444" } }, r.rejected),
-              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#ec4899", fontWeight: 900 } }, r.points)
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px", color: "#ec4899", fontWeight: 900 } }, r.points),
+              /*#__PURE__*/React.createElement("td", { style: { padding: "9px 8px" } },
+                /*#__PURE__*/React.createElement("button", {
+                  onClick: () => setEmpReport(r.id),
+                  style: { background: "#6366f1", color: "#fff", border: "none", borderRadius: 6, padding: "5px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }
+                }, isAr ? "📄 عرض" : "📄 View")
+              )
             ))
           )
         )
@@ -10606,7 +10614,142 @@ const ReportsPanel = ({ achievements, employees, criteria, lang, th, t }) => {
       rows.length === 0 && /*#__PURE__*/React.createElement("div", {
         style: { padding: 30, textAlign: "center", color: th.textMuted, fontSize: 13 }
       }, isAr ? "لا توجد بيانات لهذه السنة" : "No data for this year")
-    )
+    ),
+    // Employee detail report modal (by evaluation year)
+    empReport && (() => {
+      const emp = emps.find(e => e.id === empReport);
+      if (!emp) return null;
+      const mine = achievements.filter(a => a.empId === empReport);
+      const evYears = Array.from(new Set(mine.map(a => a.evalYear || a.year).filter(Boolean))).sort().reverse();
+      const grouped = evYears.map(ey => {
+        const list = mine.filter(a => (a.evalYear || a.year) === ey);
+        const ap = list.filter(a => a.status === "approved");
+        return {
+          ey,
+          list: list.sort((x, y) => (y.date || "").localeCompare(x.date || "")),
+          total: list.length,
+          approved: ap.length,
+          pending: list.filter(a => a.status === "pending").length,
+          rejected: list.filter(a => a.status === "rejected").length,
+          points: ap.reduce((s, a) => s + (a.points || 0), 0)
+        };
+      });
+      const critName = (id) => {
+        const c = criteria.find(x => x.id === id);
+        return c ? (isAr ? (c.nameAr || c.id) : (c.nameEn || c.id)) : (id || "-");
+      };
+      const badge = (st) => {
+        const map = {
+          approved: { c: "#10b981", l: isAr ? "معتمد" : "Approved" },
+          pending: { c: "#f59e0b", l: isAr ? "معلّق" : "Pending" },
+          rejected: { c: "#ef4444", l: isAr ? "مرفوض" : "Rejected" }
+        };
+        const m = map[st] || map.pending;
+        return /*#__PURE__*/React.createElement("span", {
+          style: { background: `${m.c}20`, color: m.c, borderRadius: 6, padding: "2px 8px", fontSize: 10, fontWeight: 700, whiteSpace: "nowrap" }
+        }, m.l);
+      };
+      const exportEmp = () => {
+        const headers = [isAr ? "سنة التقييم" : "Eval year", isAr ? "التاريخ" : "Date", isAr ? "المعيار" : "Criteria",
+                         isAr ? "الوصف" : "Description", isAr ? "الدور" : "Role", isAr ? "النقاط" : "Points", isAr ? "الحالة" : "Status"];
+        const data = [];
+        grouped.forEach(g => g.list.forEach(a => data.push([
+          g.ey, a.date || "", critName(a.criteriaId), a.description || "", a.role || "", a.points || 0, a.status || ""
+        ])));
+        downloadCSV(`report_${emp.id}.csv`, buildCSV(headers, data));
+      };
+      return /*#__PURE__*/React.createElement("div", {
+        onClick: () => setEmpReport(null),
+        style: {
+          position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 9999,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 16
+        }
+      },
+        /*#__PURE__*/React.createElement("div", {
+          onClick: e => e.stopPropagation(),
+          style: {
+            background: th.bg, border: `1px solid ${th.border}`, borderRadius: 16,
+            width: "100%", maxWidth: 860, maxHeight: "88vh", overflowY: "auto",
+            direction: isAr ? "rtl" : "ltr"
+          }
+        },
+          // Header
+          /*#__PURE__*/React.createElement("div", {
+            style: { padding: "16px 20px", borderBottom: `1px solid ${th.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", position: "sticky", top: 0, background: th.bg, zIndex: 2 }
+          },
+            /*#__PURE__*/React.createElement("div", null,
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 16, fontWeight: 900, color: th.text } },
+                isAr ? (emp.nameAr || emp.nameEn) : (emp.nameEn || emp.nameAr)),
+              /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: th.textMuted, marginTop: 3 } },
+                emp.id + " • " + (emp.dept || "-") + " • " + (emp.username || ""))
+            ),
+            /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 8 } },
+              /*#__PURE__*/React.createElement("button", {
+                onClick: exportEmp,
+                style: { background: "#10b981", color: "#fff", border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }
+              }, isAr ? "📥 تصدير" : "📥 Export"),
+              /*#__PURE__*/React.createElement("button", {
+                onClick: () => setEmpReport(null),
+                style: { background: th.input, color: th.text, border: `1px solid ${th.border}`, borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }
+              }, isAr ? "إغلاق" : "Close")
+            )
+          ),
+          // Body: grouped by evaluation year
+          /*#__PURE__*/React.createElement("div", { style: { padding: 20 } },
+            grouped.length === 0 && /*#__PURE__*/React.createElement("div", {
+              style: { textAlign: "center", color: th.textMuted, padding: 30, fontSize: 13 }
+            }, isAr ? "لا توجد إنجازات" : "No achievements"),
+            grouped.map(g => /*#__PURE__*/React.createElement("div", {
+              key: g.ey,
+              style: { marginBottom: 22, border: `1px solid ${th.border}`, borderRadius: 12, overflow: "hidden" }
+            },
+              // Year header with summary
+              /*#__PURE__*/React.createElement("div", {
+                style: { background: th.card, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }
+              },
+                /*#__PURE__*/React.createElement("span", { style: { fontSize: 14, fontWeight: 900, color: th.text } },
+                  (isAr ? "سنة التقييم: " : "Eval year: ") + g.ey),
+                /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 12, fontSize: 11, flexWrap: "wrap" } },
+                  /*#__PURE__*/React.createElement("span", { style: { color: th.textMuted } }, (isAr ? "إجمالي: " : "Total: ") + g.total),
+                  /*#__PURE__*/React.createElement("span", { style: { color: "#10b981" } }, (isAr ? "معتمد: " : "Approved: ") + g.approved),
+                  /*#__PURE__*/React.createElement("span", { style: { color: "#f59e0b" } }, (isAr ? "معلّق: " : "Pending: ") + g.pending),
+                  /*#__PURE__*/React.createElement("span", { style: { color: "#ef4444" } }, (isAr ? "مرفوض: " : "Rejected: ") + g.rejected),
+                  /*#__PURE__*/React.createElement("span", { style: { color: "#ec4899", fontWeight: 900 } }, (isAr ? "النقاط: " : "Points: ") + g.points)
+                )
+              ),
+              // Achievements list
+              /*#__PURE__*/React.createElement("div", { style: { overflowX: "auto" } },
+                /*#__PURE__*/React.createElement("table", { style: { width: "100%", borderCollapse: "collapse", fontSize: 11 } },
+                  /*#__PURE__*/React.createElement("thead", null,
+                    /*#__PURE__*/React.createElement("tr", { style: { background: th.input } },
+                      [isAr ? "التاريخ" : "Date", isAr ? "المعيار" : "Criteria", isAr ? "الوصف" : "Description",
+                       isAr ? "الدور" : "Role", isAr ? "النقاط" : "Points", isAr ? "الحالة" : "Status"].map((h, i) =>
+                        /*#__PURE__*/React.createElement("th", {
+                          key: i,
+                          style: { padding: "8px", textAlign: isAr ? "right" : "left", color: th.textMuted, fontWeight: 700, whiteSpace: "nowrap" }
+                        }, h))
+                    )
+                  ),
+                  /*#__PURE__*/React.createElement("tbody", null,
+                    g.list.map((a, i) => /*#__PURE__*/React.createElement("tr", {
+                      key: i,
+                      style: { borderTop: `1px solid ${th.border}` }
+                    },
+                      /*#__PURE__*/React.createElement("td", { style: { padding: "8px", color: th.textMuted, whiteSpace: "nowrap" } }, a.date || "-"),
+                      /*#__PURE__*/React.createElement("td", { style: { padding: "8px", color: th.text } }, critName(a.criteriaId)),
+                      /*#__PURE__*/React.createElement("td", { style: { padding: "8px", color: th.text, maxWidth: 260 } }, a.description || "-"),
+                      /*#__PURE__*/React.createElement("td", { style: { padding: "8px", color: th.textMuted } }, a.role || "-"),
+                      /*#__PURE__*/React.createElement("td", { style: { padding: "8px", color: "#ec4899", fontWeight: 800 } }, a.points || 0),
+                      /*#__PURE__*/React.createElement("td", { style: { padding: "8px" } }, badge(a.status))
+                    ))
+                  )
+                )
+              )
+            ))
+          )
+        )
+      );
+    })()
   );
 };
 
@@ -11044,8 +11187,9 @@ const AdminPortal = ({
   const TODAY = new Date().toISOString().split("T")[0];
   const pending = achievements.filter(a => a.status === "pending");
   const allApproved = achievements.filter(a => a.status === "approved");
-  const cyApproved = allApproved.filter(a => yearToCalYear(a.year) === CY);
-  const cyPending = pending.filter(a => yearToCalYear(a.year) === CY);
+  const inCY2 = a => (a.date || "").slice(0, 4) === CY;
+  const cyApproved = allApproved.filter(inCY2);
+  const cyPending = pending.filter(inCY2);
   const top5 = Object.entries(cyApproved.reduce((acc, a) => {
     acc[a.empId] = (acc[a.empId] || 0) + a.points;
     return acc;
@@ -11609,7 +11753,7 @@ const AdminPortal = ({
   }), /*#__PURE__*/React.createElement(Stat, {
     icon: "\u274C",
     label: lang === "ar" ? "\u0645\u0631\u0641\u0648\u0636\u0629" : "Rejected",
-    value: achievements.filter(a => a.status === "rejected" && yearToCalYear(a.year) === CY).length,
+    value: achievements.filter(a => a.status === "rejected" && (a.date || "").slice(0, 4) === CY).length,
     subSmall: `/ ${achievements.filter(a => a.status === "rejected").length}`,
     color: "#ef4444"
   }), /*#__PURE__*/React.createElement(Stat, {
