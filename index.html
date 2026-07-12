@@ -7442,6 +7442,103 @@ tr:nth-child(even) td{background:#fafafa}
 // ══════════════════════════════════════════════════════════════
 // EMPLOYEE PORTAL
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// WELCOME POINTS POPUP — new points since last visit
+// ══════════════════════════════════════════════════════════════
+const WelcomePointsPopup = ({ items, totalPts, userName, onClose, lang, th }) => {
+  const isAr = lang === "ar";
+  const CC = ["#6366f1", "#f59e0b", "#10b981", "#ec4899", "#8b5cf6", "#06b6d4"];
+  const conf = Array.from({ length: 40 }, (_, i) => ({
+    id: i,
+    color: CC[i % CC.length],
+    left: `${Math.random() * 100}%`,
+    delay: `${Math.random() * 1.2}s`,
+    size: 5 + Math.random() * 8,
+    dur: `${1.8 + Math.random() * 1.4}s`
+  }));
+  React.useEffect(() => {
+    const st = document.createElement("style");
+    st.textContent = "@keyframes kafuFall { 0% { transform: translateY(-40px) rotate(0); opacity: 1; } 100% { transform: translateY(105vh) rotate(600deg); opacity: 0; } }" +
+      "@keyframes kafuPop { 0% { transform: scale(.75); opacity: 0; } 60% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }" +
+      "@keyframes kafuGlow { 0%,100% { box-shadow: 0 0 26px rgba(99,102,241,.5); } 50% { box-shadow: 0 0 44px rgba(236,72,153,.7); } }";
+    document.head.appendChild(st);
+    return () => { try { document.head.removeChild(st); } catch (e) {} };
+  }, []);
+  return React.createElement("div", {
+    style: {
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.82)", zIndex: 10001,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16, overflow: "hidden"
+    }
+  },
+    conf.map(c => React.createElement("div", {
+      key: c.id,
+      style: {
+        position: "absolute", top: -20, left: c.left,
+        width: c.size, height: c.size, background: c.color,
+        borderRadius: c.id % 2 ? "50%" : 2,
+        animation: `kafuFall ${c.dur} ${c.delay} linear forwards`,
+        pointerEvents: "none"
+      }
+    })),
+    React.createElement("div", {
+      style: {
+        background: th.bg, border: "2px solid #6366f1", borderRadius: 20,
+        width: "100%", maxWidth: 480, maxHeight: "86vh", overflowY: "auto",
+        padding: 26, textAlign: "center", direction: isAr ? "rtl" : "ltr",
+        animation: "kafuPop .5s ease-out, kafuGlow 2.6s ease-in-out infinite", position: "relative"
+      }
+    },
+      React.createElement("div", { style: { fontSize: 44, marginBottom: 8 } }, "🎉"),
+      React.createElement("h2", {
+        style: { fontSize: 20, fontWeight: 900, color: th.text, marginBottom: 6 }
+      }, isAr ? ("مبروك " + userName + "!") : ("Congrats " + userName + "!")),
+      React.createElement("p", {
+        style: { fontSize: 13, color: th.textMuted, marginBottom: 18 }
+      }, isAr ? "حصلت على نقاط جديدة" : "You earned new points"),
+      React.createElement("div", {
+        style: {
+          background: "linear-gradient(135deg,#6366f1,#ec4899)", borderRadius: 16,
+          padding: "18px 14px", marginBottom: 18
+        }
+      },
+        React.createElement("div", { style: { fontSize: 38, fontWeight: 900, color: "#fff", lineHeight: 1 } }, "+" + totalPts),
+        React.createElement("div", { style: { fontSize: 12, color: "rgba(255,255,255,.9)", marginTop: 5, fontWeight: 700 } },
+          isAr ? "نقطة جديدة" : "new points")
+      ),
+      React.createElement("div", { style: { display: "grid", gap: 8, marginBottom: 20, textAlign: isAr ? "right" : "left" } },
+        items.slice(0, 6).map((it, i) => React.createElement("div", {
+          key: i,
+          style: {
+            background: th.card, border: `1px solid ${th.border}`, borderRadius: 10,
+            padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10
+          }
+        },
+          React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", {
+              style: { fontSize: 12, color: th.text, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }
+            }, it.title),
+            React.createElement("div", { style: { fontSize: 10, color: th.textMuted, marginTop: 2 } }, it.sub)
+          ),
+          React.createElement("span", {
+            style: { background: "#10b98120", color: "#10b981", borderRadius: 8, padding: "4px 10px", fontSize: 12, fontWeight: 900, whiteSpace: "nowrap" }
+          }, "+" + it.pts)
+        )),
+        items.length > 6 && React.createElement("div", {
+          style: { fontSize: 11, color: th.textMuted, textAlign: "center", paddingTop: 4 }
+        }, isAr ? ("و " + (items.length - 6) + " أخرى...") : ("and " + (items.length - 6) + " more..."))
+      ),
+      React.createElement("button", {
+        onClick: onClose,
+        style: {
+          width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff",
+          border: "none", borderRadius: 12, padding: "13px", fontSize: 14, fontWeight: 800,
+          cursor: "pointer", fontFamily: "inherit"
+        }
+      }, isAr ? "رائع! 🚀" : "Awesome! 🚀")
+    )
+  );
+};
+
 const EmployeePortal = ({
   user,
   criteria,
@@ -7468,7 +7565,89 @@ const EmployeePortal = ({
     theme: th
   } = useTheme();
   const bgSolid = isDark ? th.bgSolid : "#fff";
+  // ── WELCOME POINTS POPUP: detect new points since last visit ──
+  const [welcomePts, setWelcomePts] = useState(null);
+  useEffect(() => {
+    if (!user || !user.id) return;
+    const KEY = "kafu_seen_" + user.id;
+    let seen = [];
+    try { seen = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { seen = []; }
+    const isFirst = seen.length === 0;
+    // approved achievements that earn points
+    const mine = achievements.filter(a => a.empId === user.id && a.status === "approved" && (a.points || 0) > 0);
+    const fresh = mine.filter(a => !seen.includes(String(a.id)));
+    const allIds = mine.map(a => String(a.id));
+    if (isFirst) {
+      // first login on this device: just record, don't spam
+      try { localStorage.setItem(KEY, JSON.stringify(allIds)); } catch (e) {}
+      return;
+    }
+    if (fresh.length > 0) {
+      const critName = (id) => {
+        const c = criteria.find(x => x.id === id);
+        return c ? (lang === "ar" ? (c.nameAr || c.id) : (c.nameEn || c.id)) : (id || "");
+      };
+      const items = fresh.map(a => ({
+        title: a.description || critName(a.criteriaId),
+        sub: (a.date || "") + (a.source === "excellence" || a.teamId || a.projectId
+              ? (lang === "ar" ? " • فرق التميز" : " • Excellence Teams")
+              : (lang === "ar" ? " • إنجاز" : " • Achievement")),
+        pts: a.points || 0
+      }));
+      const total = fresh.reduce((s, a) => s + (a.points || 0), 0);
+      setWelcomePts({ items, total });
+      try { localStorage.setItem(KEY, JSON.stringify(allIds)); } catch (e) {}
+    }
+  }, [user, achievements]);
   const [tab, setTab] = useState("home");
+  // ── EMPLOYEE NOTIFICATIONS: built from own achievements ──
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifSeen, setNotifSeen] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("kafu_notif_" + (user?.id || "")) || "[]"); } catch (e) { return []; }
+  });
+  const myNotifs = React.useMemo(() => {
+    if (!user || !user.id) return [];
+    const mine = achievements.filter(a => a.empId === user.id);
+    const critName = (id) => {
+      const c = criteria.find(x => x.id === id);
+      return c ? (lang === "ar" ? (c.nameAr || c.id) : (c.nameEn || c.id)) : (id || "");
+    };
+    const isExcel = (a) => a.source === "excellence" || a.teamId || a.projectId;
+    return mine.map(a => {
+      const label = a.description || critName(a.criteriaId);
+      const src = isExcel(a)
+        ? (lang === "ar" ? "فرق التميز" : "Excellence Teams")
+        : (lang === "ar" ? "إنجاز" : "Achievement");
+      let title, icon, color;
+      if (a.status === "approved") {
+        icon = "✅";
+        color = "#10b981";
+        title = lang === "ar" ? `تم اعتماد إنجازك (+${a.points || 0} نقطة)` : `Approved (+${a.points || 0} pts)`;
+      } else if (a.status === "rejected") {
+        icon = "❌";
+        color = "#ef4444";
+        title = lang === "ar" ? "تم رفض إنجازك" : "Rejected";
+      } else {
+        icon = "⏳";
+        color = "#f59e0b";
+        title = lang === "ar" ? "إنجازك قيد المراجعة" : "Pending review";
+      }
+      return {
+        id: String(a.id),
+        icon, color, title,
+        body: label,
+        sub: src + (a.date ? " • " + a.date : ""),
+        ts: a.date || "",
+        read: notifSeen.includes(String(a.id))
+      };
+    }).sort((x, y) => (y.ts || "").localeCompare(x.ts || ""));
+  }, [achievements, user, criteria, lang, notifSeen]);
+  const myUnread = myNotifs.filter(n => !n.read).length;
+  const markAllRead = () => {
+    const ids = myNotifs.map(n => n.id);
+    setNotifSeen(ids);
+    try { localStorage.setItem("kafu_notif_" + user.id, JSON.stringify(ids)); } catch (e) {}
+  };
   const [showChangePwd, setShowChangePwd] = useState(false);
   const [pwdForm, setPwdForm] = useState({ current: "", next: "", confirm: "" });
   const [pwdMsg, setPwdMsg] = useState("");
@@ -7710,7 +7889,74 @@ const EmployeePortal = ({
     )
   ),
 
-    toast && /*#__PURE__*/React.createElement(Toast, {
+    notifOpen && /*#__PURE__*/React.createElement("div", {
+    onClick: () => { markAllRead(); setNotifOpen(false); },
+    style: {
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998,
+      display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "70px 12px 12px"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: {
+      background: th.bg, border: `1px solid ${th.border}`, borderRadius: 16,
+      width: "100%", maxWidth: 440, maxHeight: "76vh", display: "flex", flexDirection: "column",
+      direction: lang === "ar" ? "rtl" : "ltr", overflow: "hidden"
+    }
+  },
+    /*#__PURE__*/React.createElement("div", {
+      style: { padding: "14px 18px", borderBottom: `1px solid ${th.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: th.card }
+    },
+      /*#__PURE__*/React.createElement("span", { style: { fontSize: 15, fontWeight: 900, color: th.text } },
+        (lang === "ar" ? "🔔 الإشعارات" : "🔔 Notifications") + (myUnread > 0 ? ` (${myUnread})` : "")),
+      /*#__PURE__*/React.createElement("button", {
+        onClick: () => { markAllRead(); setNotifOpen(false); },
+        style: { background: "transparent", border: "none", color: th.textMuted, fontSize: 20, cursor: "pointer", lineHeight: 1 }
+      }, "×")
+    ),
+    /*#__PURE__*/React.createElement("div", { style: { overflowY: "auto", padding: 12 } },
+      myNotifs.length === 0 && /*#__PURE__*/React.createElement("div", {
+        style: { textAlign: "center", color: th.textMuted, padding: 40, fontSize: 13 }
+      }, lang === "ar" ? "لا توجد إشعارات" : "No notifications"),
+      myNotifs.slice(0, 30).map(n => /*#__PURE__*/React.createElement("div", {
+        key: n.id,
+        style: {
+          background: n.read ? "transparent" : `${n.color}10`,
+          border: `1px solid ${n.read ? th.border : n.color + "40"}`,
+          borderRadius: 10, padding: "11px 13px", marginBottom: 8,
+          display: "flex", gap: 10, alignItems: "flex-start"
+        }
+      },
+        /*#__PURE__*/React.createElement("span", { style: { fontSize: 17, lineHeight: 1.2 } }, n.icon),
+        /*#__PURE__*/React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, fontWeight: 800, color: n.color, marginBottom: 3 } }, n.title),
+          /*#__PURE__*/React.createElement("div", {
+            style: { fontSize: 12, color: th.text, marginBottom: 3, wordBreak: "break-word" }
+          }, n.body),
+          /*#__PURE__*/React.createElement("div", { style: { fontSize: 10, color: th.textMuted } }, n.sub)
+        ),
+        !n.read && /*#__PURE__*/React.createElement("span", {
+          style: { width: 8, height: 8, borderRadius: "50%", background: n.color, flexShrink: 0, marginTop: 4 }
+        })
+      ))
+    ),
+    myNotifs.length > 0 && /*#__PURE__*/React.createElement("div", {
+      style: { padding: 12, borderTop: `1px solid ${th.border}` }
+    }, /*#__PURE__*/React.createElement("button", {
+      onClick: () => { markAllRead(); setNotifOpen(false); },
+      style: {
+        width: "100%", background: th.input, color: th.text, border: `1px solid ${th.border}`,
+        borderRadius: 10, padding: "10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+      }
+    }, lang === "ar" ? "تحديد الكل كمقروء" : "Mark all as read"))
+  )),
+    welcomePts && /*#__PURE__*/React.createElement(WelcomePointsPopup, {
+    items: welcomePts.items,
+    totalPts: welcomePts.total,
+    userName: lang === "ar" ? (user.firstNameAr || user.nameAr || "") : (user.firstNameEn || user.nameEn || ""),
+    onClose: () => setWelcomePts(null),
+    lang: lang,
+    th: th
+  }), toast && /*#__PURE__*/React.createElement(Toast, {
     msg: toast.msg,
     type: toast.type,
     onClose: () => setToast(null)
@@ -7751,8 +7997,8 @@ const EmployeePortal = ({
     toggleTheme: toggleTheme,
     setLang: setLang,
     bgSolid: bgSolid,
-    unreadCount: unreadCount || 0,
-    onNotifOpen: onNotifOpen || (() => {})
+    unreadCount: myUnread,
+    onNotifOpen: () => setNotifOpen(true)
   }), /*#__PURE__*/React.createElement(AddAchModal, {
     open: showAdd,
     onClose: () => setShowAdd(false),
