@@ -8902,6 +8902,9 @@ const CoordinatorPortal = ({
   const [showPdf, setShowPdf] = useState(null);
   const [pdfYear, setPdfYear] = useState(user?.evalYear || "2024-2025");
   const [achFilter, setAchFilter] = useState("all");
+  const [achStatusFilter, setAchStatusFilter] = useState("all");
+  const [achCritFilter, setAchCritFilter] = useState("all");
+  const [achSearch, setAchSearch] = useState("");
   const [empAchOpen, setEmpAchOpen] = useState({});
   const [myAchOpen, setMyAchOpen] = useState({});
   const [myAchFilter, setMyAchFilter] = useState(user?.evalYear || "2024-2025");
@@ -8938,7 +8941,18 @@ const CoordinatorPortal = ({
     pts,
     emp: employees.find(e => e.id === id)
   }));
-  const filtAchs = achFilter === "all" ? achievements : achievements.filter(a => a.year === achFilter);
+  const filtAchs = achievements.filter(a => {
+    if (achFilter !== "all" && a.year !== achFilter) return false;
+    if (achStatusFilter !== "all" && a.status !== achStatusFilter) return false;
+    if (achCritFilter !== "all" && a.criteriaId !== achCritFilter) return false;
+    if (achSearch && achSearch.trim()) {
+      const q = achSearch.trim().toLowerCase();
+      const emp = employees.find(e => e.id === a.empId);
+      const hay = [a.empId, emp?.nameAr, emp?.nameEn, emp?.username, a.description].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
   const togEmpAch = id => setEmpAchOpen(p => ({
     ...p,
     [id]: !p[id]
@@ -9848,7 +9862,50 @@ const CoordinatorPortal = ({
   }, t.allYears), EVAL_YEARS.map(y => /*#__PURE__*/React.createElement("option", {
     key: y,
     value: y
-  }, y)))), employees.map(emp => {
+  }, y))), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: achSearch,
+    onChange: e => setAchSearch(e.target.value),
+    placeholder: lang === "ar" ? "🔍 بحث بالاسم أو الرقم الوظيفي..." : "🔍 Search name or ID...",
+    style: {
+      background: th.input,
+      border: `1px solid ${th.inputBorder}`,
+      color: th.text,
+      borderRadius: 8,
+      padding: "5px 10px",
+      fontSize: 11,
+      minWidth: 200
+    }
+  }), /*#__PURE__*/React.createElement("select", {
+    value: achStatusFilter,
+    onChange: e => setAchStatusFilter(e.target.value),
+    style: {
+      background: th.input,
+      border: `1px solid ${th.inputBorder}`,
+      color: th.text,
+      borderRadius: 8,
+      padding: "4px 10px",
+      fontSize: 11
+    }
+  }, /*#__PURE__*/React.createElement("option", { value: "all" }, lang === "ar" ? "كل الحالات" : "All statuses"),
+     /*#__PURE__*/React.createElement("option", { value: "approved" }, lang === "ar" ? "✅ معتمدة" : "✅ Approved"),
+     /*#__PURE__*/React.createElement("option", { value: "pending" }, lang === "ar" ? "⏳ معلّقة" : "⏳ Pending"),
+     /*#__PURE__*/React.createElement("option", { value: "rejected" }, lang === "ar" ? "❌ مرفوضة" : "❌ Rejected")
+  ), /*#__PURE__*/React.createElement("select", {
+    value: achCritFilter,
+    onChange: e => setAchCritFilter(e.target.value),
+    style: {
+      background: th.input,
+      border: `1px solid ${th.inputBorder}`,
+      color: th.text,
+      borderRadius: 8,
+      padding: "4px 10px",
+      fontSize: 11
+    }
+  }, /*#__PURE__*/React.createElement("option", { value: "all" }, lang === "ar" ? "كل المعايير" : "All criteria"),
+     Array.from(new Set(achievements.map(a => a.criteriaId).filter(Boolean))).sort().map(c =>
+       /*#__PURE__*/React.createElement("option", { key: c, value: c }, c))
+  )), employees.map(emp => {
     const eAchs = filtAchs.filter(a => a.empId === emp.id);
     if (!eAchs.length) return null;
     const isO = empAchOpen[emp.id];
@@ -10738,6 +10795,9 @@ const AdminPortal = ({
   const [showPdf, setShowPdf] = useState(null);
   const [pdfYear, setPdfYear] = useState("2024-2025");
   const [achFilter, setAchFilter] = useState("all");
+  const [achStatusFilter, setAchStatusFilter] = useState("all");
+  const [achCritFilter, setAchCritFilter] = useState("all");
+  const [achSearch, setAchSearch] = useState("");
   const [achOpen, setAchOpen] = useState({});
   const [toast, setToast] = useState(null);
   const [celeb, setCeleb] = useState(null);
@@ -10757,7 +10817,18 @@ const AdminPortal = ({
     pts,
     emp: employees.find(e => e.id === id)
   }));
-  const filtAchs = achFilter === "all" ? achievements : achievements.filter(a => a.year === achFilter);
+  const filtAchs = achievements.filter(a => {
+    if (achFilter !== "all" && a.year !== achFilter) return false;
+    if (achStatusFilter !== "all" && a.status !== achStatusFilter) return false;
+    if (achCritFilter !== "all" && a.criteriaId !== achCritFilter) return false;
+    if (achSearch && achSearch.trim()) {
+      const q = achSearch.trim().toLowerCase();
+      const emp = employees.find(e => e.id === a.empId);
+      const hay = [a.empId, emp?.nameAr, emp?.nameEn, emp?.username, a.description].filter(Boolean).join(" ").toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
   const togAch = id => setAchOpen(p => ({
     ...p,
     [id]: !p[id]
@@ -11436,7 +11507,50 @@ const AdminPortal = ({
   }, t.allYears), EVAL_YEARS.map(y => /*#__PURE__*/React.createElement("option", {
     key: y,
     value: y
-  }, y)))), employees.map(emp => {
+  }, y))), /*#__PURE__*/React.createElement("input", {
+    type: "text",
+    value: achSearch,
+    onChange: e => setAchSearch(e.target.value),
+    placeholder: lang === "ar" ? "🔍 بحث بالاسم أو الرقم الوظيفي..." : "🔍 Search name or ID...",
+    style: {
+      background: th.input,
+      border: `1px solid ${th.inputBorder}`,
+      color: th.text,
+      borderRadius: 8,
+      padding: "5px 10px",
+      fontSize: 11,
+      minWidth: 200
+    }
+  }), /*#__PURE__*/React.createElement("select", {
+    value: achStatusFilter,
+    onChange: e => setAchStatusFilter(e.target.value),
+    style: {
+      background: th.input,
+      border: `1px solid ${th.inputBorder}`,
+      color: th.text,
+      borderRadius: 8,
+      padding: "4px 10px",
+      fontSize: 11
+    }
+  }, /*#__PURE__*/React.createElement("option", { value: "all" }, lang === "ar" ? "كل الحالات" : "All statuses"),
+     /*#__PURE__*/React.createElement("option", { value: "approved" }, lang === "ar" ? "✅ معتمدة" : "✅ Approved"),
+     /*#__PURE__*/React.createElement("option", { value: "pending" }, lang === "ar" ? "⏳ معلّقة" : "⏳ Pending"),
+     /*#__PURE__*/React.createElement("option", { value: "rejected" }, lang === "ar" ? "❌ مرفوضة" : "❌ Rejected")
+  ), /*#__PURE__*/React.createElement("select", {
+    value: achCritFilter,
+    onChange: e => setAchCritFilter(e.target.value),
+    style: {
+      background: th.input,
+      border: `1px solid ${th.inputBorder}`,
+      color: th.text,
+      borderRadius: 8,
+      padding: "4px 10px",
+      fontSize: 11
+    }
+  }, /*#__PURE__*/React.createElement("option", { value: "all" }, lang === "ar" ? "كل المعايير" : "All criteria"),
+     Array.from(new Set(achievements.map(a => a.criteriaId).filter(Boolean))).sort().map(c =>
+       /*#__PURE__*/React.createElement("option", { key: c, value: c }, c))
+  )), employees.map(emp => {
     const eAchs = filtAchs.filter(a => a.empId === emp.id);
     if (!eAchs.length) return null;
     const isO = achOpen[emp.id];
