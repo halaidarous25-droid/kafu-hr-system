@@ -7565,40 +7565,51 @@ const EmployeePortal = ({
     theme: th
   } = useTheme();
   const bgSolid = isDark ? th.bgSolid : "#fff";
-  // ── WELCOME POINTS POPUP: detect new points since last visit ──
+  // ── WELCOME POINTS POPUP: congratulate on approved points (once per session) ──
   const [welcomePts, setWelcomePts] = useState(null);
+  const welcomeShownRef = React.useRef(false);
   useEffect(() => {
     if (!user || !user.id) return;
-    const KEY = "kafu_seen_" + user.id;
-    let seen = [];
-    try { seen = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { seen = []; }
-    const isFirst = seen.length === 0;
-    // approved achievements that earn points
-    const mine = achievements.filter(a => a.empId === user.id && a.status === "approved" && (a.points || 0) > 0);
-    const fresh = mine.filter(a => !seen.includes(String(a.id)));
-    const allIds = mine.map(a => String(a.id));
-    if (isFirst) {
-      // first login on this device: just record, don't spam
-      try { localStorage.setItem(KEY, JSON.stringify(allIds)); } catch (e) {}
+    if (welcomeShownRef.current) return;              // already shown this session
+    if (!achievements || achievements.length === 0) return;  // wait for data
+
+    // approved achievements that earned points
+    const mine = achievements.filter(a =>
+      a.empId === user.id && a.status === "approved" && (a.points || 0) > 0
+    );
+    if (mine.length === 0) return;
+
+    // Show once per "points signature" — reappears only when new points are approved
+    const SIG_KEY = "kafu_welcome_" + user.id;
+    const totalPts = mine.reduce((s, a) => s + (a.points || 0), 0);
+    const signature = mine.length + ":" + totalPts;
+    let lastSig = "";
+    try { lastSig = localStorage.getItem(SIG_KEY) || ""; } catch (e) {}
+    if (lastSig === signature) {
+      welcomeShownRef.current = true;   // nothing new since last time
       return;
     }
-    if (fresh.length > 0) {
-      const critName = (id) => {
-        const c = criteria.find(x => x.id === id);
-        return c ? (lang === "ar" ? (c.nameAr || c.id) : (c.nameEn || c.id)) : (id || "");
-      };
-      const items = fresh.map(a => ({
+
+    const critName = (id) => {
+      const c = criteria.find(x => x.id === id);
+      return c ? (lang === "ar" ? (c.nameAr || c.id) : (c.nameEn || c.id)) : (id || "");
+    };
+    const isExcel = (a) => a.source === "excellence" || a.teamId || a.projectId;
+    const items = mine
+      .slice()
+      .sort((x, y) => (y.date || "").localeCompare(x.date || ""))
+      .map(a => ({
         title: a.description || critName(a.criteriaId),
-        sub: (a.date || "") + (a.source === "excellence" || a.teamId || a.projectId
+        sub: (a.date || "") + (isExcel(a)
               ? (lang === "ar" ? " • فرق التميز" : " • Excellence Teams")
               : (lang === "ar" ? " • إنجاز" : " • Achievement")),
         pts: a.points || 0
       }));
-      const total = fresh.reduce((s, a) => s + (a.points || 0), 0);
-      setWelcomePts({ items, total });
-      try { localStorage.setItem(KEY, JSON.stringify(allIds)); } catch (e) {}
-    }
-  }, [user, achievements]);
+
+    setWelcomePts({ items, total: totalPts });
+    welcomeShownRef.current = true;
+    try { localStorage.setItem(SIG_KEY, signature); } catch (e) {}
+  }, [user, achievements, criteria, lang]);
   const [tab, setTab] = useState("home");
   // ── EMPLOYEE NOTIFICATIONS: built from own achievements ──
   const [notifOpen, setNotifOpen] = useState(false);
@@ -13149,7 +13160,54 @@ const Login = ({
 // ROOT APP
 // ══════════════════════════════════════════════════════════════
 function App() {
-  const [user, setUser] = useState(null);
+  const SESSION_KEY = "kafu_session";
+  const IDLE_MINUTES = 15;
+  const [user, setUserRaw] = useState(() => {
+    // restore session on page refresh (expires after IDLE_MINUTES of inactivity)
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !s.user || !s.ts) return null;
+      if (Date.now() - s.ts > IDLE_MINUTES * 60 * 1000) {
+        sessionStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return s.user;
+    } catch (e) { return null; }
+  });
+  const setUser = React.useCallback((next) => {
+    setUserRaw(prev => {
+      const val = typeof next === "function" ? next(prev) : next;
+      try {
+        if (val) sessionStorage.setItem(SESSION_KEY, JSON.stringify({ user: val, ts: Date.now() }));
+        else sessionStorage.removeItem(SESSION_KEY);
+      } catch (e) {}
+      return val;
+    });
+  }, []);
+  // ── AUTO-LOGOUT after 15 minutes of inactivity ──
+  useEffect(() => {
+    if (!user) return;
+    let timer;
+    const touch = () => {
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ user, ts: Date.now() }));
+      } catch (e) {}
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+        setUserRaw(null);
+      }, IDLE_MINUTES * 60 * 1000);
+    };
+    const events = ["mousedown", "keydown", "touchstart", "scroll", "click"];
+    events.forEach(ev => window.addEventListener(ev, touch, { passive: true }));
+    touch();
+    return () => {
+      clearTimeout(timer);
+      events.forEach(ev => window.removeEventListener(ev, touch));
+    };
+  }, [user]);
   const [criteria, setCriteria] = useState(INIT_CRITERIA);
   const [achievements, setAchs] = useState(INIT_ACHS);
   const [employees, setEmps] = useState(INIT_EMPS);
@@ -13396,16 +13454,7 @@ function App() {
     ...e,
     isActive: e.isActive !== false
   }]);
-  // ── Session timeout (30 min inactivity) ──────────────
-  const SESSION_MS = 30 * 60 * 1000;
-  useEffect(() => {
-    if (!user) return;
-    let timer = setTimeout(() => setUser(null), SESSION_MS);
-    const reset = () => { clearTimeout(timer); timer = setTimeout(() => setUser(null), SESSION_MS); };
-    const events = ["mousedown", "keydown", "touchstart", "scroll"];
-    events.forEach(ev => window.addEventListener(ev, reset, { passive: true }));
-    return () => { clearTimeout(timer); events.forEach(ev => window.removeEventListener(ev, reset)); };
-  }, [user]);
+  
 
   const editEmp = async (id, u) => {
     // optimistic local update
