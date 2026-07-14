@@ -13177,9 +13177,9 @@ function App() {
 // ===== DB SYNC =====
   const [dbReady,setDbReady]=React.useState(false);
 
-  React.useEffect(()=>{
-    (async()=>{
-      console.log('[KAFU] Connecting to Supabase...');
+  const loadAllData = React.useCallback(async (silent) => {
+    try {
+      if (!silent) console.log('[KAFU] Connecting to Supabase...');
       // Employees — DB is source of truth (always replace local seed)
       const emps=await sbGet('employees',{select:'*',order:'id.asc'});
       if(emps){
@@ -13240,10 +13240,44 @@ function App() {
         teamId:((pteams||[]).find(pt=>pt.project_id===p.id)||{}).team_id||'',
         createdAt:p.created_at,
       })));
-      console.log('[KAFU] DB ready ✅');
+      if (!silent) console.log('[KAFU] DB ready ✅');
       setDbReady(true);
-    })();
-  },[]);
+    } catch (e) {
+      if (!silent) console.error('[KAFU] Load error:', e);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => { loadAllData(false); }, [loadAllData]);
+
+  // AUTO-REFRESH: pull latest data every 30s so all screens stay in sync
+  useEffect(() => {
+    const REFRESH_MS = 30000;
+    const isBusy = () => {
+      // Skip refresh if a modal/overlay is open (avoid closing it under the user)
+      const overlays = document.querySelectorAll('div[style*="position: fixed"], div[style*="position:fixed"]');
+      for (const el of overlays) {
+        const z = parseInt(window.getComputedStyle(el).zIndex || "0", 10);
+        if (z >= 900 && el.offsetParent !== null) return true;
+      }
+      // Skip if user is typing in a field
+      const ae = document.activeElement;
+      if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.tagName === "SELECT")) return true;
+      return false;
+    };
+    const tick = () => {
+      if (document.hidden) return;   // tab not visible
+      if (isBusy()) return;          // user mid-action
+      loadAllData(true);
+    };
+    const timer = setInterval(tick, REFRESH_MS);
+    const onVis = () => { if (!document.hidden && !isBusy()) loadAllData(true); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [loadAllData]);
 
   // DB actions
   const addAchDB=async(a)=>{
