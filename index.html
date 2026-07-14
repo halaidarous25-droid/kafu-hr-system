@@ -11051,7 +11051,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             position: (r.position || "").trim(),
             hireDate: csvDateToISO(r["hireDate(dd/mm/yyyy)"] || r.hireDate || ""),
             evalYear: (r.evalYear || "").trim(),
-            role: (r.role || "employee").trim(),
+            role: (r.role || "employee").trim().toLowerCase(),
             username: uname,
             password: "!!SET_REQUIRED!!",
             lastEval: csvDateToISO(r["lastEval(dd/mm/yyyy)"] || r.lastEval || ""),
@@ -11076,7 +11076,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             first_name_ar: emp.firstNameAr, first_name_en: emp.firstNameEn,
             email: emp.email, dept: emp.dept, position: emp.position,
             hire_date: emp.hireDate || null, eval_year: emp.evalYear || null,
-            role: emp.role, password: pwHashed,
+            role: String(emp.role || "employee").trim().toLowerCase(), password: pwHashed,
             contract_end: emp.contractEnd || null, last_eval: emp.lastEval || null,
             is_active: emp.active, active: emp.active
           };
@@ -13187,7 +13187,7 @@ function App() {
           id:String(e.id),username:e.username||'',
           nameAr:e.name_ar||'',nameEn:e.name_en||'',
           firstNameAr:e.first_name_ar||'',firstNameEn:e.first_name_en||'',
-          role:e.role||'employee',dept:e.dept||'',position:e.position||'',
+          role:String(e.role||'employee').trim().toLowerCase(),dept:e.dept||'',position:e.position||'',
           password:e.password||'',isActive:e.is_active!==false&&e.active!==false,
           email:e.email||'',hireDate:e.hire_date||'',lastEval:e.last_eval||'',
           contractEnd:e.contract_end||'',evalYear:e.eval_year||'',
@@ -13407,13 +13407,38 @@ function App() {
     return () => { clearTimeout(timer); events.forEach(ev => window.removeEventListener(ev, reset)); };
   }, [user]);
 
-  const editEmp = (id, u) => {
+  const editEmp = async (id, u) => {
+    // optimistic local update
     setEmps(p => p.map(e => e.id === id ? {
       ...e,
       ...u
     } : e));
-    // Keep the logged-in user object in sync if they edited their own record (e.g. password change)
     setUser(cur => (cur && cur.id === id) ? { ...cur, ...u } : cur);
+    // persist to DB (map camelCase -> snake_case columns)
+    const row = {};
+    if (u.username !== undefined) row.username = u.username;
+    if (u.nameAr !== undefined) row.name_ar = u.nameAr;
+    if (u.nameEn !== undefined) row.name_en = u.nameEn;
+    if (u.firstNameAr !== undefined) row.first_name_ar = u.firstNameAr;
+    if (u.firstNameEn !== undefined) row.first_name_en = u.firstNameEn;
+    if (u.email !== undefined) row.email = u.email;
+    if (u.dept !== undefined) row.dept = u.dept;
+    if (u.position !== undefined) row.position = u.position;
+    if (u.hireDate !== undefined) row.hire_date = u.hireDate || null;
+    if (u.evalYear !== undefined) row.eval_year = u.evalYear || null;
+    if (u.lastEval !== undefined) row.last_eval = u.lastEval || null;
+    if (u.contractEnd !== undefined) row.contract_end = u.contractEnd || null;
+    if (u.password !== undefined) row.password = u.password;
+    if (u.role !== undefined) row.role = String(u.role).trim().toLowerCase();
+    if (u.isActive !== undefined) { row.is_active = u.isActive; row.active = u.isActive; }
+    if (u.active !== undefined) { row.is_active = u.active; row.active = u.active; }
+    if (Object.keys(row).length === 0) return;
+    try {
+      await sbPatch('employees', id, row);
+      console.log('[KAFU] Employee saved:', id, row);
+    } catch (e) {
+      console.error('[KAFU] Employee save failed:', e);
+    }
   };
   const addEvalDate = ev => setEvalDates(p => [...p, ev]);
   const editEvalDate = ev => setEvalDates(p => p.map(x => x.id === ev.id ? ev : x));
@@ -13474,10 +13499,21 @@ function App() {
   }, ...p].slice(0, 50));
   const toggleTheme = () => setIsDark(d => !d);
   const handleLogout = () => setUser(null);
-  const updateEmp = (id, u) => setEmps(p => p.map(e => e.id === id ? {
-    ...e,
-    ...u
-  } : e));
+  const updateEmp = async (id, u) => {
+    setEmps(p => p.map(e => e.id === id ? { ...e, ...u } : e));
+    const row = {};
+    if (u.password !== undefined) row.password = u.password;
+    if (u.username !== undefined) row.username = u.username;
+    if (u.role !== undefined) row.role = String(u.role).trim().toLowerCase();
+    if (u.isActive !== undefined) { row.is_active = u.isActive; row.active = u.isActive; }
+    if (Object.keys(row).length === 0) return;
+    try {
+      await sbPatch('employees', id, row);
+      console.log('[KAFU] Employee updated in DB:', id);
+    } catch (e) {
+      console.error('[KAFU] Update failed:', e);
+    }
+  };
   const sharedCtx = {
     theme,
     lang
