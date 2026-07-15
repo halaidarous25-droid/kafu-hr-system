@@ -3113,16 +3113,7 @@ const AddEmpModal = ({
     label: t.firstArL,
     value: f.firstNameAr,
     onChange: s("firstNameAr")
-  }), /*#__PURE__*/React.createElement("div", {
-    style: {
-      gridColumn: "1/-1"
-    }
-  }, /*#__PURE__*/React.createElement(Inp, {
-    label: t.emailL,
-    value: f.email,
-    onChange: s("email"),
-    type: "email"
-  })), /*#__PURE__*/React.createElement(Sel, {
+  }), /*#__PURE__*/React.createElement(Sel, {
     label: t.genderL,
     value: f.gender,
     onChange: s("gender")
@@ -3960,7 +3951,7 @@ const ReqModal = ({
       fontSize: 11,
       marginTop: 2
     }
-  }, emp?.email, " \u2022 ", emp?.dept, " \u2022 ", ach.date)), mode === "review" && /*#__PURE__*/React.createElement("div", {
+  }, emp?.dept, " \u2022 ", ach.date)), mode === "review" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
@@ -4747,7 +4738,7 @@ const PdfReport = ({
       opacity: .7,
       marginTop: 4
     }
-  }, emp.email)), /*#__PURE__*/React.createElement("div", {
+  }, emp.id)), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: "center",
       background: "rgba(255,255,255,0.15)",
@@ -9333,7 +9324,7 @@ const CoordinatorPortal = ({
         color: th.textMuted,
         fontSize: 10
       }
-    }, emp.email))), /*#__PURE__*/React.createElement("div", {
+    }, emp.id))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 5,
@@ -9998,7 +9989,7 @@ const CoordinatorPortal = ({
         color: th.textMuted,
         fontSize: 10
       }
-    }, emp?.email, " \u2022 ", a.date))),
+    }, emp?.id, " \u2022 ", a.date))),
     a.source === "excellence_team" && /*#__PURE__*/React.createElement("div", {
       style: {
         display: "inline-flex", alignItems: "center", gap: 5,
@@ -11085,7 +11076,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
             id: emp.id, username: emp.username || emp.id,
             name_ar: emp.nameAr, name_en: emp.nameEn,
             first_name_ar: emp.firstNameAr, first_name_en: emp.firstNameEn,
-            email: emp.email, dept: emp.dept, position: emp.position,
+            dept: emp.dept, position: emp.position,
             hire_date: emp.hireDate || null, eval_year: emp.evalYear || null,
             role: String(emp.role || "employee").trim().toLowerCase(), password: pwHashed,
             contract_end: emp.contractEnd || null, last_eval: emp.lastEval || null,
@@ -11578,7 +11569,7 @@ const AdminPortal = ({
         color: th.textMuted,
         fontSize: 10
       }
-    }, emp.email))), /*#__PURE__*/React.createElement("div", {
+    }, emp.id))), /*#__PURE__*/React.createElement("div", {
       style: {
         display: "flex",
         gap: 5,
