@@ -3462,6 +3462,7 @@ const AddAchModal = ({
   user,
   evalDates = [],
   isCoordOrAdmin = false,
+  employees = [],
   t,
   lang
 }) => {
@@ -3477,6 +3478,7 @@ const AddAchModal = ({
     year: user?.evalYear || "2024-2025"
   };
   const [f, setF] = useState(EMPTY);
+  const [targetEmp, setTargetEmp] = useState("");
   const [fileObj, setFileObj] = useState(null);
   const [fileErr, setFileErr] = useState("");
   const [filePreview, setFilePreview] = useState(null);
@@ -3522,25 +3524,30 @@ const AddAchModal = ({
   };
   const submit = () => {
     if (!f.criteriaId || !f.subId || !f.description || !f.date || atLim) return;
+    // Admin/coordinator must pick a target employee
+    if (isCoordOrAdmin && !targetEmp) return;
+    const empIdFinal = isCoordOrAdmin && targetEmp ? targetEmp : user.id;
+    const targetObj = isCoordOrAdmin && targetEmp ? employees.find(e => e.id === targetEmp) : user;
     const attachment = fileObj ? {
       ...fileObj
     } : null;
     onSubmit({
       id: Date.now(),
-      empId: user.id,
+      empId: empIdFinal,
       criteriaId: f.criteriaId,
       subId: f.subId,
       description: f.description,
       date: f.date,
       role: f.role,
       points: selS?.points || 1,
-      status: "pending",
+      status: isCoordOrAdmin ? "approved" : "pending",
       attachment,
       month: new Date(f.date).getMonth() + 1,
-      year: evalYearForDate(f.date, user.id, evalDates, user),
+      year: evalYearForDate(f.date, empIdFinal, evalDates, targetObj),
       rejectionReason: ""
     });
     setF(EMPTY);
+    setTargetEmp("");
     setFileObj(null);
     setFilePreview(null);
     setFileErr("");
@@ -3555,7 +3562,32 @@ const AddAchModal = ({
     open: open,
     onClose: onClose,
     title: t.addAchTitle
+  }, isCoordOrAdmin && /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 14,
+      padding: 12,
+      background: th.input,
+      border: "1px solid " + th.inputBorder,
+      borderRadius: 10
+    }
   }, /*#__PURE__*/React.createElement(Sel, {
+    label: lang === "ar" ? "\u0627\u0644\u0645\u0648\u0638\u0641 (\u0625\u0644\u0632\u0627\u0645\u064A)" : "Employee (required)",
+    value: targetEmp,
+    onChange: v => setTargetEmp(v),
+    required: true
+  }, /*#__PURE__*/React.createElement("option", {
+    value: ""
+  }, lang === "ar" ? "\u2014 \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641 \u2014" : "\u2014 Select employee \u2014"),
+  employees.filter(e => e.role !== "admin").sort((a, b) => (lang === "ar" ? (a.nameAr || "").localeCompare(b.nameAr || "") : (a.nameEn || "").localeCompare(b.nameEn || ""))).map(e => /*#__PURE__*/React.createElement("option", {
+    key: e.id,
+    value: e.id
+  }, (lang === "ar" ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr)) + " (" + e.id + ")"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: th.textMuted,
+      marginTop: 6
+    }
+  }, lang === "ar" ? "\u2705 \u0633\u064A\u064F\u0636\u0627\u0641 \u0627\u0644\u0625\u0646\u062C\u0627\u0632 \u0645\u0639\u062A\u0645\u062F\u0627\u064B \u0645\u0628\u0627\u0634\u0631\u0629" : "\u2705 Achievement will be added as approved")), /*#__PURE__*/React.createElement(Sel, {
     label: t.mainCrit,
     value: f.criteriaId,
     onChange: v => {
@@ -9530,13 +9562,14 @@ const CoordinatorPortal = ({
     user: user,
     evalDates: evalDates,
     isCoordOrAdmin: true,
+    employees: employees,
     t: t,
     lang: lang,
     onSubmit: a => {
       onAdd(a);
       setShowAddAch(false);
       setToast({
-        msg: "🎉",
+        msg: lang === "ar" ? "\u2705 \u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0625\u0646\u062C\u0627\u0632 \u0644\u0644\u0645\u0648\u0638\u0641" : "\u2705 Achievement added for employee",
         type: "success"
       });
     }
