@@ -5600,6 +5600,7 @@ const ExcellenceTeamsPage = ({
   excelProjects, setExcelProjects,
   excelPendingChanges = [], setExcelPendingChanges = () => {},
   excelPerms = {}, setExcelPerms = () => {},
+  onDeleteTeam = () => {}, onDeleteProject = () => {},
   onAddAchievement     // (ach) => void — hook to KAFU global state
 }) => {
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -5772,8 +5773,7 @@ const ExcellenceTeamsPage = ({
     setShowTeamModal(false); setEditingTeam(null);
   };
   const deleteTeam = id => {
-    setExcelTeams(prev => prev.filter(t2 => t2.id !== id));
-    setExcelProjects(prev => prev.filter(p => !(p.teamIds || []).includes(id)));
+    onDeleteTeam(id);
     if (selTeamId === id) setSelTeamId(visibleTeams[0]?.id || null);
     showToast(lang==='ar'?'🗑️ تم حذف الفريق':'🗑️ Team deleted');
     setShowDeleteConfirm(null);
@@ -5798,7 +5798,7 @@ const ExcellenceTeamsPage = ({
     setShowProjModal(false); setEditingProj(null);
   };
   const deleteProj = id => {
-    setExcelProjects(prev => prev.filter(p => p.id !== id));
+    onDeleteProject(id);
     if (selProjId === id) setSelProjId(null);
     showToast(lang==='ar'?'🗑️ تم حذف المشروع':'🗑️ Project deleted');
     setShowDeleteConfirm(null);
@@ -12722,8 +12722,8 @@ const AdminPortal = ({
     /*#__PURE__*/React.createElement(EvalDatesPage, {
       evalDates: evalDates, employees: employees, achievements: achievements,
       onAddEval: (empId) => setShowEval(true),
-      onEditEval: onEditEvalDate, onDeleteEval: null,
-      canEdit: false, canChangeYear: true,
+      onEditEval: onEditEvalDate, onDeleteEval: onDeleteEvalDate,
+      canEdit: true, canChangeYear: true,
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
@@ -13479,6 +13479,7 @@ function App() {
           pwdResetRequested:e.pwd_reset_requested===true,pwdResetAt:e.pwd_reset_at||null,
           email:e.email||'',hireDate:e.hire_date||'',lastEval:e.last_eval||'',
           contractEnd:e.contract_end||'',evalYear:e.eval_year||'',
+          contractEndManual:e.contract_end_manual===true,
         })));
         console.log('[KAFU] Loaded',emps.length,'employees from DB');
       }
@@ -13652,6 +13653,25 @@ function App() {
     }
   };
 // ===== END DB SYNC =====
+  const deleteTeamDB = async (id) => {
+    setExcelTeams(prev => prev.filter(t => t.id !== id));
+    setExcelProjects(prev => prev.filter(p => !(p.teamIds || []).includes(id)));
+    try {
+      await sbDelWhere('team_members', 'team_id', id);
+      await sbDelWhere('project_teams', 'team_id', id);
+      await sbDel('excellence_teams', id);
+      console.log('[KAFU] Team deleted from DB:', id);
+    } catch (e) { console.error('[KAFU] Team delete failed:', e); }
+  };
+  const deleteProjectDB = async (id) => {
+    setExcelProjects(prev => prev.filter(p => p.id !== id));
+    try {
+      await sbDelWhere('project_members', 'project_id', id);
+      await sbDelWhere('project_teams', 'project_id', id);
+      await sbDel('excellence_projects', id);
+      console.log('[KAFU] Project deleted from DB:', id);
+    } catch (e) { console.error('[KAFU] Project delete failed:', e); }
+  };
   const [showNotif, setShowNotif] = useState(false);
   const theme = isDark ? DARK : LIGHT;
   const t = TR[lang];
@@ -13710,7 +13730,8 @@ function App() {
     if (u.hireDate !== undefined) row.hire_date = u.hireDate || null;
     if (u.evalYear !== undefined) row.eval_year = u.evalYear || null;
     if (u.lastEval !== undefined) row.last_eval = u.lastEval || null;
-    if (u.contractEnd !== undefined) row.contract_end = u.contractEnd || null;
+    if (u.contractEnd !== undefined) { row.contract_end = u.contractEnd || null; row.contract_end_manual = true; setEmps(p => p.map(e => e.id === id ? { ...e, contractEndManual: true } : e)); }
+    if (u.contractEndManual !== undefined) row.contract_end_manual = u.contractEndManual;
     if (u.password !== undefined) row.password = u.password;
     if (u.role !== undefined) row.role = String(u.role).trim().toLowerCase();
     if (u.isActive !== undefined) { row.is_active = u.isActive; row.active = u.isActive; }
@@ -13728,10 +13749,12 @@ function App() {
   const delEvalDate = id => setEvalDates(p => p.filter(x => x.id !== id));
   // ── CONTINUOUS SYNC: keep each employee's lastEval + contractEnd in step with
   //     their latest registered evaluation record (from the evaluations page).
+  //     Skips any employee whose contractEnd was manually overridden.
   useEffect(() => {
     setEmps(prev => {
       let changed = false;
       const next = prev.map(emp => {
+        if (emp.contractEndManual) return emp; // manual override — never auto-touch
         const recs = getEmpEvalRecords(emp.id, evalDates);
         if (recs.length === 0) return emp;
         const latest = recs[recs.length - 1]; // most recent eval (records are date-sorted asc)
@@ -13804,7 +13827,7 @@ function App() {
     lang
   };
   const unreadCount = notifs.filter(n => !n.read).length;
-  const excelProps = { excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges, setExcelPendingChanges, excelPerms, setExcelPerms };
+  const excelProps = { excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges, setExcelPendingChanges, excelPerms, setExcelPerms, onDeleteTeam: deleteTeamDB, onDeleteProject: deleteProjectDB };
   const sharedProps = {
     t,
     lang,
