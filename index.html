@@ -8938,8 +8938,8 @@ tab === "teams" && (isAnyLead
     ? /*#__PURE__*/React.createElement(ExcellenceTeamsPage, {
         user: user, achievements: achievements, employees: employees, criteria: criteria,
         t: t, lang: lang, isDark: isDark, theme: th, viewMode: "employee",
-        excelTeams: excelTeams, setExcelTeams: setExcelTeams,
-        excelProjects: excelProjects, setExcelProjects: setExcelProjects,
+        excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB,
+        excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB,
         excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges,
         excelPerms: excelPerms, setExcelPerms: setExcelPerms,
         onAddAchievement: onAdd
@@ -10481,7 +10481,7 @@ const CoordinatorPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
       achievements: achievements,
       employees: employees,
@@ -12620,10 +12620,10 @@ const AdminPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
     tab === "import" && /*#__PURE__*/React.createElement(ImportExportPanel, {
       achievements: achievements, employees: employees, setEmployees: setEmployees,
-      addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeams,
+      addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB,
       evalDates: evalDates, onAddEvalDate: onAddEvalDate, lang: lang, theme: th
     }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
@@ -13301,6 +13301,7 @@ function App() {
         id:t.id,nameAr:t.name_ar,nameEn:t.name_en||t.name_ar,
         descAr:t.desc_ar||'',descEn:t.desc_en||'',leadId:t.lead_id||'',
         color:t.color||'#6366f1',icon:t.icon||'⭐',
+        memberIds:(members||[]).filter(m=>m.team_id===t.id).map(m=>m.emp_id),
         members:(members||[]).filter(m=>m.team_id===t.id).map(m=>m.emp_id),
         createdAt:t.created_at,
       })));
@@ -13408,9 +13409,10 @@ function App() {
       await sbPost('excellence_teams',{id:t.id,name_ar:t.nameAr,name_en:t.nameEn||t.nameAr,
         desc_ar:t.descAr||'',desc_en:t.descEn||'',lead_id:t.leadId||null,
         color:t.color||'#6366f1',icon:t.icon||'⭐'});
-      if(t.members!==undefined){
+      const mem = t.memberIds !== undefined ? t.memberIds : t.members;
+      if(mem!==undefined){
         await sbDelWhere('team_members','team_id',t.id);
-        if(t.members.length>0)await sbPost('team_members',t.members.map(id=>({team_id:t.id,emp_id:id})));
+        if(mem.length>0)await sbPost('team_members',mem.map(id=>({team_id:t.id,emp_id:id})));
       }
     }
   };
@@ -13606,7 +13608,7 @@ function App() {
     addAch: addAchDB,
     onUpdate: updAchDB,
     onDelete: delAchDB,
-    onEditAch: editAch,
+    onEditAch: updAchDB,
     onEditEmployee: editEmp,
     onAddEmployee: addEmp,
     evalDates,
