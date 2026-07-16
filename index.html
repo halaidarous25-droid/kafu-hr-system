@@ -4297,243 +4297,112 @@ const ForgotPasswordModal = ({
   open,
   onClose,
   employees,
-  onUpdateEmployee,
+  onRequestReset,
   t,
   lang
 }) => {
   const {
     theme: th
   } = useTheme();
-  const [step, setStep] = useState(1);
   const [query, setQuery] = useState("");
-  const [found, setFound] = useState(null);
-  const [newPwd, setNewPwd] = useState("");
-  const [cfmPwd, setCfmPwd] = useState("");
   const [msg, setMsg] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
+  const [done, setDone] = useState(false);
+  const isAr = lang === "ar";
   const inputSt = {
-    ...IST,
-    background: th.input,
-    borderColor: th.inputBorder,
-    color: th.text
-  };
-  const btnSt = (bg, bc, tc) => ({
     width: "100%",
-    background: bg,
-    border: `1px solid ${bc}`,
+    background: th.input,
+    border: "1px solid " + th.inputBorder,
     borderRadius: 10,
-    padding: "11px",
-    color: tc,
-    fontSize: 13,
-    fontWeight: 700,
-    cursor: "pointer",
-    marginBottom: 10
-  });
-  const reset = () => {
-    setStep(1);
-    setQuery("");
-    setFound(null);
-    setNewPwd("");
-    setCfmPwd("");
-    setMsg("");
-    setShowPwd(false);
+    padding: "12px 14px",
+    color: th.text,
+    fontSize: 14,
+    fontFamily: "inherit",
+    boxSizing: "border-box",
+    marginBottom: 12
   };
-  const handleFind = () => {
+  const reset = () => { setQuery(""); setMsg(""); setDone(false); };
+  const submit = () => {
     const q = query.trim().toLowerCase();
-    const e = employees.find(e => e.id === q || (e.username || "").toLowerCase() === q || (e.email || "").split("@")[0].toLowerCase() === q);
-    if (e) {
-      setFound(e);
-      setStep(2);
-      setMsg("");
-    } else setMsg(t.empNotFound);
-  };
-  const handleReset = () => {
-    if (!newPwd) {
-      setMsg(lang === "ar" ? "أدخل كلمة المرور" : "Enter password");
-      return;
-    }
-    if (newPwd !== cfmPwd) {
-      setMsg(t.passwordMismatch);
-      return;
-    }
-    hashPw(newPwd, found.id).then(hashedNew => {
-      onUpdateEmployee(found.id, { password: hashedNew });
-    });
-    setMsg(t.passwordChanged);
-    setTimeout(() => {
-      reset();
-      onClose();
-    }, 1500);
+    const e = employees.find(x => x.id === q || (x.username || "").toLowerCase() === q);
+    if (!e) { setMsg(isAr ? "لم يتم العثور على المستخدم" : "User not found"); return; }
+    if (onRequestReset) onRequestReset(e.id);
+    setDone(true);
+    setMsg("");
   };
   if (!open) return null;
-  return /*#__PURE__*/React.createElement("div", {
-    onClick: e => e.target === e.currentTarget && (reset(), onClose()),
+  return React.createElement("div", {
+    onClick: () => { reset(); onClose(); },
     style: {
-      position: "fixed",
-      inset: 0,
-      background: "rgba(0,0,0,0.75)",
-      backdropFilter: "blur(8px)",
-      zIndex: 5001,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 20
+      position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, React.createElement("div", {
+    onClick: e => e.stopPropagation(),
     style: {
-      background: th.bgSolid,
-      border: `1px solid ${th.border}`,
-      borderRadius: 17,
-      padding: 28,
-      width: "100%",
-      maxWidth: 400,
-      boxShadow: th.shadow
+      background: th.bg, border: "1px solid " + th.border, borderRadius: 16,
+      width: "100%", maxWidth: 420, padding: 24, direction: isAr ? "rtl" : "ltr"
     }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      textAlign: "center",
-      marginBottom: 20
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 36,
-      marginBottom: 8
-    }
-  }, "\uD83D\uDD11"), /*#__PURE__*/React.createElement("h3", {
-    style: {
-      color: th.text,
-      fontSize: 16,
-      fontWeight: 800
-    }
-  }, t.resetPassword), /*#__PURE__*/React.createElement("p", {
-    style: {
-      color: th.textMuted,
-      fontSize: 12,
-      marginTop: 6
-    }
-  }, step === 1 ? lang === "ar" ? "أدخل رقم الموظف أو اسم المستخدم" : "Enter employee ID or username" : `${lang === "ar" ? "تم العثور على:" : "Found:"} ${found?.nameEn}`)), msg && /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: msg.includes("✅") ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)",
-      border: `1px solid ${msg.includes("✅") ? "#10b981" : "#ef4444"}`,
-      borderRadius: 9,
-      padding: "8px 13px",
-      color: msg.includes("✅") ? "#10b981" : "#ef4444",
-      fontSize: 12,
-      marginBottom: 14,
-      textAlign: "center"
-    }
-  }, msg), step === 1 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: 14
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    style: {
-      color: th.textMuted,
-      fontSize: 10,
-      fontWeight: 700,
-      display: "block",
-      marginBottom: 5,
-      textTransform: "uppercase"
-    }
-  }, t.empId), /*#__PURE__*/React.createElement("input", {
-    value: query,
-    onChange: e => setQuery(e.target.value),
-    placeholder: lang === "ar" ? "402278 أو alorfiab" : "402278 or alorfiab",
-    style: inputSt,
-    onKeyDown: e => e.key === "Enter" && handleFind()
-  })), /*#__PURE__*/React.createElement("button", {
-    onClick: handleFind,
-    style: btnSt("linear-gradient(135deg,#6366f1,#8b5cf6)", "transparent", "#fff")
-  }, lang === "ar" ? "🔍 بحث عن الحساب" : "🔍 Find Account"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => {
-      reset();
-      onClose();
-    },
-    style: btnSt("transparent", th.border, th.textMuted)
-  }, t.cancel)), step === 2 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      background: th.surface,
-      border: `1px solid ${th.border}`,
-      borderRadius: 10,
-      padding: "10px 14px",
-      marginBottom: 14
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontWeight: 700,
-      fontSize: 12,
-      color: th.text
-    }
-  }, found?.nameEn), /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: th.textMuted,
-      marginTop: 2
-    }
-  }, found?.email)), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: 13
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    style: {
-      color: th.textMuted,
-      fontSize: 10,
-      fontWeight: 700,
-      display: "block",
-      marginBottom: 5,
-      textTransform: "uppercase"
-    }
-  }, t.newPassword), /*#__PURE__*/React.createElement("div", {
-    style: {
-      position: "relative"
-    }
-  }, /*#__PURE__*/React.createElement("input", {
-    value: newPwd,
-    onChange: e => setNewPwd(e.target.value),
-    type: showPwd ? "text" : "password",
-    placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022",
-    style: inputSt
-  }), /*#__PURE__*/React.createElement("button", {
-    onClick: () => setShowPwd(p => !p),
-    style: {
-      position: "absolute",
-      left: 10,
-      top: "50%",
-      transform: "translateY(-50%)",
-      background: "none",
-      border: "none",
-      color: th.textMuted,
-      cursor: "pointer",
-      fontSize: 16
-    }
-  }, showPwd ? t.hidePwd : t.showPwd))), /*#__PURE__*/React.createElement("div", {
-    style: {
-      marginBottom: 16
-    }
-  }, /*#__PURE__*/React.createElement("label", {
-    style: {
-      color: th.textMuted,
-      fontSize: 10,
-      fontWeight: 700,
-      display: "block",
-      marginBottom: 5,
-      textTransform: "uppercase"
-    }
-  }, t.confirmPassword), /*#__PURE__*/React.createElement("input", {
-    value: cfmPwd,
-    onChange: e => setCfmPwd(e.target.value),
-    type: showPwd ? "text" : "password",
-    placeholder: "\u2022\u2022\u2022\u2022\u2022\u2022",
-    style: inputSt,
-    onKeyDown: e => e.key === "Enter" && handleReset()
-  })), /*#__PURE__*/React.createElement("button", {
-    onClick: handleReset,
-    style: btnSt("linear-gradient(135deg,#10b981,#059669)", "transparent", "#fff")
-  }, lang === "ar" ? "💾 حفظ كلمة المرور الجديدة" : "💾 Save New Password"), /*#__PURE__*/React.createElement("button", {
-    onClick: reset,
-    style: btnSt("transparent", th.border, th.textMuted)
-  }, lang === "ar" ? "← رجوع" : "← Back"))));
+  },
+    React.createElement("div", { style: { fontSize: 32, textAlign: "center", marginBottom: 10 } }, "🔑"),
+    React.createElement("h2", {
+      style: { fontSize: 17, fontWeight: 900, textAlign: "center", color: th.text, marginBottom: 8 }
+    }, isAr ? "طلب إعادة تعيين كلمة المرور" : "Request password reset"),
+    done
+      ? React.createElement(React.Fragment, null,
+          React.createElement("div", {
+            style: { fontSize: 40, textAlign: "center", margin: "10px 0" }
+          }, "✅"),
+          React.createElement("p", {
+            style: { fontSize: 13, color: th.textMuted, textAlign: "center", lineHeight: 1.7, marginBottom: 18 }
+          }, isAr
+              ? "تم رفع طلبك بنجاح. سيقوم المدير أو المنسق بمراجعته وتزويدك بكلمة المرور الجديدة."
+              : "Your request was submitted. An admin or coordinator will review it and provide your new password."),
+          React.createElement("button", {
+            onClick: () => { reset(); onClose(); },
+            style: {
+              width: "100%", background: "#10b981", color: "#fff", border: "none",
+              borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800,
+              cursor: "pointer", fontFamily: "inherit"
+            }
+          }, isAr ? "تم" : "Done")
+        )
+      : React.createElement(React.Fragment, null,
+          React.createElement("p", {
+            style: { fontSize: 12, color: th.textMuted, textAlign: "center", marginBottom: 16, lineHeight: 1.6 }
+          }, isAr
+              ? "أدخل اسم المستخدم أو الرقم الوظيفي، وسيتم رفع طلب للمدير لإعادة تعيين كلمة المرور."
+              : "Enter your username or ID. A request will be sent to the admin to reset your password."),
+          React.createElement("input", {
+            type: "text",
+            value: query,
+            onChange: e => { setMsg(""); setQuery(e.target.value); },
+            placeholder: isAr ? "اسم المستخدم أو الرقم الوظيفي" : "Username or ID",
+            onKeyDown: e => { if (e.key === "Enter") submit(); },
+            style: inputSt
+          }),
+          msg && React.createElement("div", {
+            style: { color: "#ef4444", fontSize: 12, marginBottom: 10, textAlign: "center" }
+          }, msg),
+          React.createElement("button", {
+            onClick: submit,
+            style: {
+              width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff",
+              border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800,
+              cursor: "pointer", fontFamily: "inherit", marginBottom: 8
+            }
+          }, isAr ? "رفع الطلب" : "Submit request"),
+          React.createElement("button", {
+            onClick: () => { reset(); onClose(); },
+            style: {
+              width: "100%", background: "transparent", color: th.textMuted,
+              border: "1px solid " + th.border, borderRadius: 10, padding: "10px",
+              fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+            }
+          }, isAr ? "إلغاء" : "Cancel")
+        )
+  ));
 };
+
 
 // ── PDF REPORT ─────────────────────────────────────────────────
 const PdfReport = ({
@@ -8938,8 +8807,8 @@ tab === "teams" && (isAnyLead
     ? /*#__PURE__*/React.createElement(ExcellenceTeamsPage, {
         user: user, achievements: achievements, employees: employees, criteria: criteria,
         t: t, lang: lang, isDark: isDark, theme: th, viewMode: "employee",
-        excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB,
-        excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB,
+        excelTeams: excelTeams, setExcelTeams: setExcelTeams,
+        excelProjects: excelProjects, setExcelProjects: setExcelProjects,
         excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges,
         excelPerms: excelPerms, setExcelPerms: setExcelPerms,
         onAddAchievement: onAdd
@@ -10481,7 +10350,7 @@ const CoordinatorPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
       achievements: achievements,
       employees: employees,
@@ -12620,10 +12489,10 @@ const AdminPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
     tab === "import" && /*#__PURE__*/React.createElement(ImportExportPanel, {
       achievements: achievements, employees: employees, setEmployees: setEmployees,
-      addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB,
+      addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeams,
       evalDates: evalDates, onAddEvalDate: onAddEvalDate, lang: lang, theme: th
     }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
@@ -12991,7 +12860,9 @@ const Login = ({
     open: showForgot,
     onClose: () => setShowForgot(false),
     employees: employees,
-    onUpdateEmployee: onUpdateEmployee,
+    onRequestReset: (empId) => {
+      if (onUpdateEmployee) onUpdateEmployee(empId, { pwdResetRequested: true, pwdResetAt: new Date().toISOString() });
+    },
     t: t,
     lang: lang
   })), /*#__PURE__*/React.createElement("div", {
@@ -13265,6 +13136,7 @@ function App() {
           firstNameAr:e.first_name_ar||'',firstNameEn:e.first_name_en||'',
           role:String(e.role||'employee').trim().toLowerCase(),dept:e.dept||'',position:e.position||'',
           password:e.password||'',isActive:e.is_active!==false&&e.active!==false,
+          pwdResetRequested:e.pwd_reset_requested===true,pwdResetAt:e.pwd_reset_at||null,
           email:e.email||'',hireDate:e.hire_date||'',lastEval:e.last_eval||'',
           contractEnd:e.contract_end||'',evalYear:e.eval_year||'',
         })));
@@ -13301,7 +13173,6 @@ function App() {
         id:t.id,nameAr:t.name_ar,nameEn:t.name_en||t.name_ar,
         descAr:t.desc_ar||'',descEn:t.desc_en||'',leadId:t.lead_id||'',
         color:t.color||'#6366f1',icon:t.icon||'⭐',
-        memberIds:(members||[]).filter(m=>m.team_id===t.id).map(m=>m.emp_id),
         members:(members||[]).filter(m=>m.team_id===t.id).map(m=>m.emp_id),
         createdAt:t.created_at,
       })));
@@ -13409,10 +13280,9 @@ function App() {
       await sbPost('excellence_teams',{id:t.id,name_ar:t.nameAr,name_en:t.nameEn||t.nameAr,
         desc_ar:t.descAr||'',desc_en:t.descEn||'',lead_id:t.leadId||null,
         color:t.color||'#6366f1',icon:t.icon||'⭐'});
-      const mem = t.memberIds !== undefined ? t.memberIds : t.members;
-      if(mem!==undefined){
+      if(t.members!==undefined){
         await sbDelWhere('team_members','team_id',t.id);
-        if(mem.length>0)await sbPost('team_members',mem.map(id=>({team_id:t.id,emp_id:id})));
+        if(t.members.length>0)await sbPost('team_members',t.members.map(id=>({team_id:t.id,emp_id:id})));
       }
     }
   };
@@ -13575,6 +13445,8 @@ function App() {
     if (u.username !== undefined) row.username = u.username;
     if (u.role !== undefined) row.role = String(u.role).trim().toLowerCase();
     if (u.isActive !== undefined) { row.is_active = u.isActive; row.active = u.isActive; }
+    if (u.pwdResetRequested !== undefined) row.pwd_reset_requested = u.pwdResetRequested;
+    if (u.pwdResetAt !== undefined) row.pwd_reset_at = u.pwdResetAt || null;
     if (Object.keys(row).length === 0) return;
     try {
       await sbPatch('employees', id, row);
@@ -13608,7 +13480,7 @@ function App() {
     addAch: addAchDB,
     onUpdate: updAchDB,
     onDelete: delAchDB,
-    onEditAch: updAchDB,
+    onEditAch: editAch,
     onEditEmployee: editEmp,
     onAddEmployee: addEmp,
     evalDates,
