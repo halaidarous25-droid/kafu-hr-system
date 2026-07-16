@@ -8807,8 +8807,8 @@ tab === "teams" && (isAnyLead
     ? /*#__PURE__*/React.createElement(ExcellenceTeamsPage, {
         user: user, achievements: achievements, employees: employees, criteria: criteria,
         t: t, lang: lang, isDark: isDark, theme: th, viewMode: "employee",
-        excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB,
-        excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB,
+        excelTeams: excelTeams, setExcelTeams: setExcelTeams,
+        excelProjects: excelProjects, setExcelProjects: setExcelProjects,
         excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges,
         excelPerms: excelPerms, setExcelPerms: setExcelPerms,
         onAddAchievement: onAdd
@@ -9043,6 +9043,9 @@ const CoordinatorPortal = ({
   const [showEval, setShowEval] = useState(false);
   const [showAddAch, setShowAddAch] = useState(false);
   const [resetTarget, setResetTarget] = useState(null);
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: "", next: "", confirm: "" });
+  const [pwdMsg, setPwdMsg] = useState("");
   const [showPdf, setShowPdf] = useState(null);
   const [pdfYear, setPdfYear] = useState(user?.evalYear || "2024-2025");
   const [achFilter, setAchFilter] = useState("all");
@@ -9893,7 +9896,67 @@ const CoordinatorPortal = ({
       marginBottom: 16,
       color: th.text
     }
-  }, t.requests, " (", pending.length, ")"), pending.length === 0 ? /*#__PURE__*/React.createElement(Card, {
+  }, t.requests, " (", pending.length, ")"),
+      /*#__PURE__*/React.createElement("div", {
+        style: { display: "grid", gap: 16, marginBottom: 22 }
+      },
+        // ── My password change ──
+        /*#__PURE__*/React.createElement("div", {
+          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
+        },
+          /*#__PURE__*/React.createElement("h3", {
+            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
+          }, lang === "ar" ? "🔒 كلمة المرور" : "🔒 Password"),
+          /*#__PURE__*/React.createElement("p", {
+            style: { fontSize: 12, color: th.textMuted, marginBottom: 12 }
+          }, lang === "ar" ? "تغيير كلمة المرور الخاصة بحسابك." : "Change your account password."),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => { setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); setShowChangePwd(true); },
+            style: {
+              background: "#6366f1", color: "#fff", border: "none", borderRadius: 9,
+              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+            }
+          }, lang === "ar" ? "تغيير كلمة المرور" : "Change password")
+        ),
+        // ── Password reset requests ──
+        /*#__PURE__*/React.createElement("div", {
+          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
+        },
+          /*#__PURE__*/React.createElement("h3", {
+            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
+          }, (lang === "ar" ? "🔑 طلبات إعادة تعيين كلمة المرور" : "🔑 Password reset requests") +
+             " (" + employees.filter(e => e.pwdResetRequested).length + ")"),
+          employees.filter(e => e.pwdResetRequested).length === 0
+            ? /*#__PURE__*/React.createElement("p", {
+                style: { fontSize: 12, color: th.textMuted }
+              }, lang === "ar" ? "لا توجد طلبات حالياً." : "No pending requests.")
+            : /*#__PURE__*/React.createElement("div", { style: { display: "grid", gap: 8 } },
+                employees.filter(e => e.pwdResetRequested).map(e => /*#__PURE__*/React.createElement("div", {
+                  key: e.id,
+                  style: {
+                    border: "1px solid " + th.border, borderRadius: 10, padding: "10px 12px",
+                    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
+                  }
+                },
+                  /*#__PURE__*/React.createElement("div", null,
+                    /*#__PURE__*/React.createElement("div", {
+                      style: { fontSize: 13, fontWeight: 700, color: th.text }
+                    }, lang === "ar" ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr)),
+                    /*#__PURE__*/React.createElement("div", {
+                      style: { fontSize: 11, color: th.textMuted, marginTop: 2 }
+                    }, "@" + (e.username || e.id) + (e.pwdResetAt ? " • " + new Date(e.pwdResetAt).toLocaleDateString() : ""))
+                  ),
+                  /*#__PURE__*/React.createElement("button", {
+                    onClick: () => setResetTarget(e),
+                    style: {
+                      background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8,
+                      padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+                    }
+                  }, lang === "ar" ? "إعادة تعيين" : "Reset")
+                ))
+              )
+        )
+      ), pending.length === 0 ? /*#__PURE__*/React.createElement(Card, {
     style: {
       textAlign: "center",
       padding: 55
@@ -10429,7 +10492,7 @@ const CoordinatorPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
       achievements: achievements,
       employees: employees,
@@ -11321,6 +11384,10 @@ const AdminPortal = ({
   } = useTheme();
   const bgSolid = isDark ? th.bgSolid : "#fff";
   const [tab, setTab] = useState("overview");
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ current: "", next: "", confirm: "" });
+  const [pwdMsg, setPwdMsg] = useState("");
+  const [resetTarget, setResetTarget] = useState(null);
   const [editAch, setEditAch] = useState(null);
   const [editEmp, setEditEmp] = useState(null);
   const [showAddEmp, setShowAddEmp] = useState(false);
@@ -11747,7 +11814,85 @@ const AdminPortal = ({
         type: "warn"
       });
     }
-  }), /*#__PURE__*/React.createElement(Modal, {
+  }), showChangePwd && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setShowChangePwd(false),
+    style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: { background: th.bg, border: "1px solid " + th.border, borderRadius: 16, width: "100%", maxWidth: 400, padding: 24, direction: lang === "ar" ? "rtl" : "ltr" }
+  },
+    /*#__PURE__*/React.createElement("h2", { style: { fontSize: 16, fontWeight: 900, color: th.text, marginBottom: 16 } }, lang === "ar" ? "🔒 تغيير كلمة المرور" : "🔒 Change password"),
+    /*#__PURE__*/React.createElement("input", {
+      type: "password", value: pwdForm.current,
+      onChange: e => { setPwdMsg(""); setPwdForm(p => Object.assign({}, p, { current: e.target.value })); },
+      placeholder: lang === "ar" ? "كلمة المرور الحالية" : "Current password",
+      style: { width: "100%", background: th.input, border: "1px solid " + th.inputBorder, borderRadius: 9, padding: "11px 13px", color: th.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 }
+    }),
+    /*#__PURE__*/React.createElement("input", {
+      type: "password", value: pwdForm.next,
+      onChange: e => { setPwdMsg(""); setPwdForm(p => Object.assign({}, p, { next: e.target.value })); },
+      placeholder: lang === "ar" ? "كلمة المرور الجديدة (8+ أحرف وأرقام)" : "New password (8+ chars, letters+numbers)",
+      style: { width: "100%", background: th.input, border: "1px solid " + th.inputBorder, borderRadius: 9, padding: "11px 13px", color: th.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 }
+    }),
+    /*#__PURE__*/React.createElement("input", {
+      type: "password", value: pwdForm.confirm,
+      onChange: e => { setPwdMsg(""); setPwdForm(p => Object.assign({}, p, { confirm: e.target.value })); },
+      placeholder: lang === "ar" ? "تأكيد كلمة المرور" : "Confirm password",
+      style: { width: "100%", background: th.input, border: "1px solid " + th.inputBorder, borderRadius: 9, padding: "11px 13px", color: th.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 }
+    }),
+    pwdMsg && /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: pwdMsg.indexOf("✅") >= 0 ? "#10b981" : "#ef4444", marginBottom: 10, textAlign: "center" } }, pwdMsg),
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (pwdForm.next.length < 8) { setPwdMsg(lang === "ar" ? "8 أحرف على الأقل" : "At least 8 characters"); return; }
+        if (!/[A-Za-z]/.test(pwdForm.next) || !/[0-9]/.test(pwdForm.next)) { setPwdMsg(lang === "ar" ? "حروف وأرقام معاً" : "Letters and numbers"); return; }
+        if (pwdForm.next !== pwdForm.confirm) { setPwdMsg(lang === "ar" ? "غير متطابقتين" : "Do not match"); return; }
+        Promise.all([hashPw(pwdForm.current, user.id), hashPw(pwdForm.next, user.id)]).then(([hc, hn]) => {
+          if (hc !== user.password) { setPwdMsg(lang === "ar" ? "كلمة المرور الحالية غير صحيحة" : "Current password incorrect"); return; }
+          if (onEditEmployee) onEditEmployee(user.id, { password: hn });
+          setPwdMsg(lang === "ar" ? "✅ تم التغيير" : "✅ Changed");
+          setTimeout(() => { setShowChangePwd(false); setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); }, 1200);
+        });
+      },
+      style: { width: "100%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }
+    }, lang === "ar" ? "حفظ" : "Save"),
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => { setShowChangePwd(false); setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); },
+      style: { width: "100%", background: "transparent", color: th.textMuted, border: "1px solid " + th.border, borderRadius: 10, padding: "10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }
+    }, lang === "ar" ? "إلغاء" : "Cancel")
+  )), resetTarget && /*#__PURE__*/React.createElement("div", {
+    onClick: () => setResetTarget(null),
+    style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.6)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }
+  }, /*#__PURE__*/React.createElement("div", {
+    onClick: e => e.stopPropagation(),
+    style: { background: th.bg, border: "1px solid " + th.border, borderRadius: 16, width: "100%", maxWidth: 400, padding: 24, direction: lang === "ar" ? "rtl" : "ltr" }
+  },
+    /*#__PURE__*/React.createElement("h2", { style: { fontSize: 16, fontWeight: 900, color: th.text, marginBottom: 6 } }, lang === "ar" ? "🔑 إعادة تعيين كلمة المرور" : "🔑 Reset password"),
+    /*#__PURE__*/React.createElement("p", { style: { fontSize: 12, color: th.textMuted, marginBottom: 16 } }, (lang === "ar" ? "للموظف: " : "For: ") + (lang === "ar" ? (resetTarget.nameAr || resetTarget.nameEn) : (resetTarget.nameEn || resetTarget.nameAr))),
+    /*#__PURE__*/React.createElement("input", {
+      type: "text", value: pwdForm.next,
+      onChange: e => { setPwdMsg(""); setPwdForm(p => Object.assign({}, p, { next: e.target.value })); },
+      placeholder: lang === "ar" ? "كلمة المرور الجديدة (8+ أحرف وأرقام)" : "New password (8+ chars)",
+      style: { width: "100%", background: th.input, border: "1px solid " + th.inputBorder, borderRadius: 9, padding: "11px 13px", color: th.text, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 }
+    }),
+    pwdMsg && /*#__PURE__*/React.createElement("div", { style: { fontSize: 12, color: pwdMsg.indexOf("✅") >= 0 ? "#10b981" : "#ef4444", marginBottom: 10, textAlign: "center" } }, pwdMsg),
+    /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: th.textMuted, marginBottom: 14, lineHeight: 1.6 } }, lang === "ar" ? "زوّد الموظف بكلمة المرور الجديدة ليدخل بها." : "Give the employee this new password to log in."),
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => {
+        if (pwdForm.next.length < 8) { setPwdMsg(lang === "ar" ? "8 أحرف على الأقل" : "At least 8 characters"); return; }
+        if (!/[A-Za-z]/.test(pwdForm.next) || !/[0-9]/.test(pwdForm.next)) { setPwdMsg(lang === "ar" ? "حروف وأرقام معاً" : "Letters and numbers"); return; }
+        hashPw(pwdForm.next, resetTarget.id).then(hn => {
+          if (onEditEmployee) onEditEmployee(resetTarget.id, { password: hn, pwdResetRequested: false, pwdResetAt: null });
+          setPwdMsg(lang === "ar" ? "✅ تم إعادة التعيين" : "✅ Reset done");
+          setTimeout(() => { setResetTarget(null); setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); }, 1200);
+        });
+      },
+      style: { width: "100%", background: "#f59e0b", color: "#fff", border: "none", borderRadius: 10, padding: "12px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", marginBottom: 8 }
+    }, lang === "ar" ? "تعيين كلمة المرور" : "Set password"),
+    /*#__PURE__*/React.createElement("button", {
+      onClick: () => { setResetTarget(null); setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); },
+      style: { width: "100%", background: "transparent", color: th.textMuted, border: "1px solid " + th.border, borderRadius: 10, padding: "10px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }
+    }, lang === "ar" ? "إلغاء" : "Cancel")
+  )), /*#__PURE__*/React.createElement(Modal, {
     open: !!editCrit,
     onClose: () => setEditCrit(null),
     title: modalTitle
@@ -12568,10 +12713,10 @@ const AdminPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB, excelProjects: excelProjects, setExcelProjects: setExcelProjectsDB, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
     tab === "import" && /*#__PURE__*/React.createElement(ImportExportPanel, {
       achievements: achievements, employees: employees, setEmployees: setEmployees,
-      addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeamsDB,
+      addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeams,
       evalDates: evalDates, onAddEvalDate: onAddEvalDate, lang: lang, theme: th
     }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
@@ -12592,6 +12737,67 @@ const AdminPortal = ({
       }, lang === "ar"
           ? "إعدادات النظام وعمليات الصيانة. عمليات الحذف الشامل أدناه نهائية — تعامل معها بحذر."
           : "System settings and maintenance. The bulk-delete operations below are permanent — handle with care."),
+      /*#__PURE__*/React.createElement("div", {
+        style: { display: "grid", gap: 16, marginBottom: 22 }
+      },
+        // ── My password change ──
+        /*#__PURE__*/React.createElement("div", {
+          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
+        },
+          /*#__PURE__*/React.createElement("h3", {
+            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
+          }, lang === "ar" ? "🔒 كلمة المرور" : "🔒 Password"),
+          /*#__PURE__*/React.createElement("p", {
+            style: { fontSize: 12, color: th.textMuted, marginBottom: 12 }
+          }, lang === "ar" ? "تغيير كلمة المرور الخاصة بحسابك." : "Change your account password."),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => { setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); setShowChangePwd(true); },
+            style: {
+              background: "#6366f1", color: "#fff", border: "none", borderRadius: 9,
+              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+            }
+          }, lang === "ar" ? "تغيير كلمة المرور" : "Change password")
+        ),
+        // ── Password reset requests ──
+        /*#__PURE__*/React.createElement("div", {
+          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
+        },
+          /*#__PURE__*/React.createElement("h3", {
+            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
+          }, (lang === "ar" ? "🔑 طلبات إعادة تعيين كلمة المرور" : "🔑 Password reset requests") +
+             " (" + employees.filter(e => e.pwdResetRequested).length + ")"),
+          employees.filter(e => e.pwdResetRequested).length === 0
+            ? /*#__PURE__*/React.createElement("p", {
+                style: { fontSize: 12, color: th.textMuted }
+              }, lang === "ar" ? "لا توجد طلبات حالياً." : "No pending requests.")
+            : /*#__PURE__*/React.createElement("div", { style: { display: "grid", gap: 8 } },
+                employees.filter(e => e.pwdResetRequested).map(e => /*#__PURE__*/React.createElement("div", {
+                  key: e.id,
+                  style: {
+                    border: "1px solid " + th.border, borderRadius: 10, padding: "10px 12px",
+                    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
+                  }
+                },
+                  /*#__PURE__*/React.createElement("div", null,
+                    /*#__PURE__*/React.createElement("div", {
+                      style: { fontSize: 13, fontWeight: 700, color: th.text }
+                    }, lang === "ar" ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr)),
+                    /*#__PURE__*/React.createElement("div", {
+                      style: { fontSize: 11, color: th.textMuted, marginTop: 2 }
+                    }, "@" + (e.username || e.id) + (e.pwdResetAt ? " • " + new Date(e.pwdResetAt).toLocaleDateString() : ""))
+                  ),
+                  /*#__PURE__*/React.createElement("button", {
+                    onClick: () => setResetTarget(e),
+                    style: {
+                      background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8,
+                      padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+                    }
+                  }, lang === "ar" ? "إعادة تعيين" : "Reset")
+                ))
+              )
+        )
+      ),
+
       /*#__PURE__*/React.createElement("div", {
         style: { display: "grid", gap: 16, marginBottom: 22 }
       },
