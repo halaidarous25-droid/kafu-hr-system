@@ -9173,7 +9173,8 @@ const CoordinatorPortal = ({
     label: t.evalDates,
     icon: "📅"
   }, { id: "excellence", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" },
-  { id: "reportsAdmin", label: lang === "ar" ? "التقارير" : "Reports", icon: "📊" }];
+  { id: "reportsAdmin", label: lang === "ar" ? "التقارير" : "Reports", icon: "📊" },
+  { id: "settings", label: lang === "ar" ? "الإعدادات" : "Settings", icon: "⚙️" }];
   const EmpCard = ({
     emp
   }) => {
@@ -9897,66 +9898,7 @@ const CoordinatorPortal = ({
       color: th.text
     }
   }, t.requests, " (", pending.length, ")"),
-      /*#__PURE__*/React.createElement("div", {
-        style: { display: "grid", gap: 16, marginBottom: 22 }
-      },
-        // ── My password change ──
-        /*#__PURE__*/React.createElement("div", {
-          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
-        },
-          /*#__PURE__*/React.createElement("h3", {
-            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
-          }, lang === "ar" ? "🔒 كلمة المرور" : "🔒 Password"),
-          /*#__PURE__*/React.createElement("p", {
-            style: { fontSize: 12, color: th.textMuted, marginBottom: 12 }
-          }, lang === "ar" ? "تغيير كلمة المرور الخاصة بحسابك." : "Change your account password."),
-          /*#__PURE__*/React.createElement("button", {
-            onClick: () => { setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); setShowChangePwd(true); },
-            style: {
-              background: "#6366f1", color: "#fff", border: "none", borderRadius: 9,
-              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
-            }
-          }, lang === "ar" ? "تغيير كلمة المرور" : "Change password")
-        ),
-        // ── Password reset requests ──
-        /*#__PURE__*/React.createElement("div", {
-          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
-        },
-          /*#__PURE__*/React.createElement("h3", {
-            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
-          }, (lang === "ar" ? "🔑 طلبات إعادة تعيين كلمة المرور" : "🔑 Password reset requests") +
-             " (" + employees.filter(e => e.pwdResetRequested).length + ")"),
-          employees.filter(e => e.pwdResetRequested).length === 0
-            ? /*#__PURE__*/React.createElement("p", {
-                style: { fontSize: 12, color: th.textMuted }
-              }, lang === "ar" ? "لا توجد طلبات حالياً." : "No pending requests.")
-            : /*#__PURE__*/React.createElement("div", { style: { display: "grid", gap: 8 } },
-                employees.filter(e => e.pwdResetRequested).map(e => /*#__PURE__*/React.createElement("div", {
-                  key: e.id,
-                  style: {
-                    border: "1px solid " + th.border, borderRadius: 10, padding: "10px 12px",
-                    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
-                  }
-                },
-                  /*#__PURE__*/React.createElement("div", null,
-                    /*#__PURE__*/React.createElement("div", {
-                      style: { fontSize: 13, fontWeight: 700, color: th.text }
-                    }, lang === "ar" ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr)),
-                    /*#__PURE__*/React.createElement("div", {
-                      style: { fontSize: 11, color: th.textMuted, marginTop: 2 }
-                    }, "@" + (e.username || e.id) + (e.pwdResetAt ? " • " + new Date(e.pwdResetAt).toLocaleDateString() : ""))
-                  ),
-                  /*#__PURE__*/React.createElement("button", {
-                    onClick: () => setResetTarget(e),
-                    style: {
-                      background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8,
-                      padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
-                    }
-                  }, lang === "ar" ? "إعادة تعيين" : "Reset")
-                ))
-              )
-        )
-      ), pending.length === 0 ? /*#__PURE__*/React.createElement(Card, {
+       pending.length === 0 ? /*#__PURE__*/React.createElement(Card, {
     style: {
       textAlign: "center",
       padding: 55
@@ -10501,7 +10443,69 @@ const CoordinatorPortal = ({
       th: th,
       t: t,
       onOpenPdf: (emp, yr) => { setPdfYear(yr); setShowPdf(emp); }
-    })
+}), tab === "settings" && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h2", {
+    style: { fontSize: 17, fontWeight: 900, color: th.text, marginBottom: 16 }
+  }, lang === "ar" ? "⚙️ الإعدادات" : "⚙️ Settings"),
+  /*#__PURE__*/React.createElement("div", {
+        style: { display: "grid", gap: 16, marginBottom: 22 }
+      },
+        // ── My password change ──
+        /*#__PURE__*/React.createElement("div", {
+          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
+        },
+          /*#__PURE__*/React.createElement("h3", {
+            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
+          }, lang === "ar" ? "🔒 كلمة المرور" : "🔒 Password"),
+          /*#__PURE__*/React.createElement("p", {
+            style: { fontSize: 12, color: th.textMuted, marginBottom: 12 }
+          }, lang === "ar" ? "تغيير كلمة المرور الخاصة بحسابك." : "Change your account password."),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => { setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); setShowChangePwd(true); },
+            style: {
+              background: "#6366f1", color: "#fff", border: "none", borderRadius: 9,
+              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+            }
+          }, lang === "ar" ? "تغيير كلمة المرور" : "Change password")
+        ),
+        // ── Password reset requests ──
+        /*#__PURE__*/React.createElement("div", {
+          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
+        },
+          /*#__PURE__*/React.createElement("h3", {
+            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
+          }, (lang === "ar" ? "🔑 طلبات إعادة تعيين كلمة المرور" : "🔑 Password reset requests") +
+             " (" + employees.filter(e => e.pwdResetRequested).length + ")"),
+          employees.filter(e => e.pwdResetRequested).length === 0
+            ? /*#__PURE__*/React.createElement("p", {
+                style: { fontSize: 12, color: th.textMuted }
+              }, lang === "ar" ? "لا توجد طلبات حالياً." : "No pending requests.")
+            : /*#__PURE__*/React.createElement("div", { style: { display: "grid", gap: 8 } },
+                employees.filter(e => e.pwdResetRequested).map(e => /*#__PURE__*/React.createElement("div", {
+                  key: e.id,
+                  style: {
+                    border: "1px solid " + th.border, borderRadius: 10, padding: "10px 12px",
+                    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
+                  }
+                },
+                  /*#__PURE__*/React.createElement("div", null,
+                    /*#__PURE__*/React.createElement("div", {
+                      style: { fontSize: 13, fontWeight: 700, color: th.text }
+                    }, lang === "ar" ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr)),
+                    /*#__PURE__*/React.createElement("div", {
+                      style: { fontSize: 11, color: th.textMuted, marginTop: 2 }
+                    }, "@" + (e.username || e.id) + (e.pwdResetAt ? " • " + new Date(e.pwdResetAt).toLocaleDateString() : ""))
+                  ),
+                  /*#__PURE__*/React.createElement("button", {
+                    onClick: () => setResetTarget(e),
+                    style: {
+                      background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8,
+                      padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
+                    }
+                  }, lang === "ar" ? "إعادة تعيين" : "Reset")
+                ))
+              )
+        )
+      ),)
   );
 };
 
@@ -12798,68 +12802,7 @@ const AdminPortal = ({
         )
       ),
 
-      /*#__PURE__*/React.createElement("div", {
-        style: { display: "grid", gap: 16, marginBottom: 22 }
-      },
-        // ── My password change ──
-        /*#__PURE__*/React.createElement("div", {
-          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
-        },
-          /*#__PURE__*/React.createElement("h3", {
-            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
-          }, lang === "ar" ? "🔒 كلمة المرور" : "🔒 Password"),
-          /*#__PURE__*/React.createElement("p", {
-            style: { fontSize: 12, color: th.textMuted, marginBottom: 12 }
-          }, lang === "ar" ? "تغيير كلمة المرور الخاصة بحسابك." : "Change your account password."),
-          /*#__PURE__*/React.createElement("button", {
-            onClick: () => { setPwdForm({ current: "", next: "", confirm: "" }); setPwdMsg(""); setShowChangePwd(true); },
-            style: {
-              background: "#6366f1", color: "#fff", border: "none", borderRadius: 9,
-              padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
-            }
-          }, lang === "ar" ? "تغيير كلمة المرور" : "Change password")
-        ),
-        // ── Password reset requests ──
-        /*#__PURE__*/React.createElement("div", {
-          style: { border: "1px solid " + th.border, borderRadius: 12, padding: 16, background: th.card }
-        },
-          /*#__PURE__*/React.createElement("h3", {
-            style: { fontSize: 14, fontWeight: 800, color: th.text, marginBottom: 6 }
-          }, (lang === "ar" ? "🔑 طلبات إعادة تعيين كلمة المرور" : "🔑 Password reset requests") +
-             " (" + employees.filter(e => e.pwdResetRequested).length + ")"),
-          employees.filter(e => e.pwdResetRequested).length === 0
-            ? /*#__PURE__*/React.createElement("p", {
-                style: { fontSize: 12, color: th.textMuted }
-              }, lang === "ar" ? "لا توجد طلبات حالياً." : "No pending requests.")
-            : /*#__PURE__*/React.createElement("div", { style: { display: "grid", gap: 8 } },
-                employees.filter(e => e.pwdResetRequested).map(e => /*#__PURE__*/React.createElement("div", {
-                  key: e.id,
-                  style: {
-                    border: "1px solid " + th.border, borderRadius: 10, padding: "10px 12px",
-                    display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap"
-                  }
-                },
-                  /*#__PURE__*/React.createElement("div", null,
-                    /*#__PURE__*/React.createElement("div", {
-                      style: { fontSize: 13, fontWeight: 700, color: th.text }
-                    }, lang === "ar" ? (e.nameAr || e.nameEn) : (e.nameEn || e.nameAr)),
-                    /*#__PURE__*/React.createElement("div", {
-                      style: { fontSize: 11, color: th.textMuted, marginTop: 2 }
-                    }, "@" + (e.username || e.id) + (e.pwdResetAt ? " • " + new Date(e.pwdResetAt).toLocaleDateString() : ""))
-                  ),
-                  /*#__PURE__*/React.createElement("button", {
-                    onClick: () => setResetTarget(e),
-                    style: {
-                      background: "#f59e0b", color: "#fff", border: "none", borderRadius: 8,
-                      padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit"
-                    }
-                  }, lang === "ar" ? "إعادة تعيين" : "Reset")
-                ))
-              )
-        )
-      ),
-
-        // ── DANGER ZONE: bulk delete (admin only) ──
+              // ── DANGER ZONE: bulk delete (admin only) ──
   /*#__PURE__*/React.createElement("div", {
     style: {
       marginTop: 24, border: "2px solid rgba(239,68,68,.4)", borderRadius: 14,
@@ -13394,6 +13337,47 @@ const Login = ({
 // ══════════════════════════════════════════════════════════════
 // ROOT APP
 // ══════════════════════════════════════════════════════════════
+class KafuErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error: error };
+  }
+  componentDidCatch(error, info) {
+    console.error("[KAFU] Caught error:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return React.createElement("div", {
+        style: {
+          minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+          background: "linear-gradient(135deg,#0a0814,#13102a,#0f172a)", color: "#fff",
+          fontFamily: "'Segoe UI',Tahoma,sans-serif", direction: "rtl", padding: 20
+        }
+      }, React.createElement("div", {
+        style: {
+          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(239,68,68,0.4)",
+          borderRadius: 16, padding: 32, maxWidth: 460, textAlign: "center"
+        }
+      },
+        React.createElement("div", { style: { fontSize: 48, marginBottom: 14 } }, "\u26A0\uFE0F"),
+        React.createElement("h2", { style: { fontSize: 18, fontWeight: 900, marginBottom: 10 } }, "\u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639"),
+        React.createElement("p", { style: { fontSize: 13, opacity: 0.8, marginBottom: 20, lineHeight: 1.7 } },
+          "\u0646\u0639\u062A\u0630\u0631\u060C \u062D\u062F\u062B\u062A \u0645\u0634\u0643\u0644\u0629 \u0645\u0624\u0642\u062A\u0629. \u062C\u0631\u0651\u0628 \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629."),
+        React.createElement("button", {
+          onClick: () => { try { sessionStorage.removeItem("kafu_session"); } catch (e) {} window.location.reload(); },
+          style: {
+            background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", border: "none",
+            borderRadius: 10, padding: "12px 26px", fontSize: 14, fontWeight: 800, cursor: "pointer", fontFamily: "inherit"
+          }
+        }, "\u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644")
+      ));
+    }
+    return this.props.children;
+  }
+}
 function App() {
   const SESSION_KEY = "kafu_session";
   const IDLE_MINUTES = 15;
@@ -13890,7 +13874,7 @@ function App() {
   })));
 }
 const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(React.createElement(App));
+root.render(React.createElement(KafuErrorBoundary, null, React.createElement(App)));
   </script>
 </body>
 </html>
