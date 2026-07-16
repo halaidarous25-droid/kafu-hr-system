@@ -5249,13 +5249,12 @@ function excelMemberRole(empId, proj, team) {
 function excelGetProjectMembers(proj, teams) {
   const seen = new Set();
   const result = [];
-  (proj.teamIds || []).forEach(tid => {
-    const t = teams.find(x => x.id === tid);
-    if (!t) return;
-    (t.memberIds || []).forEach(mid => {
-      if (!seen.has(mid)) { seen.add(mid); result.push({ id: mid, source: 'team', teamId: tid }); }
-    });
-  });
+  // Project lead is always included first
+  if (proj.projectLeadId && !seen.has(proj.projectLeadId)) {
+    seen.add(proj.projectLeadId);
+    result.push({ id: proj.projectLeadId, source: 'project' });
+  }
+  // Only explicitly selected project members — team members are NOT auto-added
   (proj.projectMemberIds || []).forEach(mid => {
     if (!seen.has(mid)) { seen.add(mid); result.push({ id: mid, source: 'project' }); }
   });
@@ -5599,8 +5598,7 @@ const ExcellenceTeamsPage = ({
   excelTeams, setExcelTeams,
   excelProjects, setExcelProjects,
   excelPendingChanges = [], setExcelPendingChanges = () => {},
-  excelPerms = {}, setExcelPerms = () => {},
-  onDeleteTeam = () => {}, onDeleteProject = () => {},
+  excelPerms = {}, setExcelPerms = () => {}, onDeleteTeam = () => {}, onDeleteProject = () => {},
   onAddAchievement     // (ach) => void — hook to KAFU global state
 }) => {
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -7026,22 +7024,23 @@ const ExcelAwardModal = ({ proj, teams, employees, onAward, onClose, lang, th, i
   const buildMembers = () => {
     const seen = new Set();
     const list = [];
-    (proj.teamIds || []).forEach(tid => {
-      const t2 = teams.find(x => x.id === tid);
-      if (!t2) return;
-      (t2.memberIds || []).forEach(mid => {
-        if (seen.has(mid)) return; seen.add(mid);
-        const role = excelMemberRole(mid, proj, t2);
-        const defPts = (proj.pointsConfig || {})[role] || (proj.pointsConfig || {}).Participant || 1;
-        const emp = employees.find(e => e.id === mid);
-        list.push({ mid, role, defPts, kafuEmp: emp, source: 'team', teamName: isAr ? t2.nameAr : t2.nameEn });
-      });
-    });
+    const t2 = (proj.teamIds || []).map(tid => teams.find(x => x.id === tid)).find(Boolean) || null;
+    const teamNm = t2 ? (isAr ? t2.nameAr : t2.nameEn) : '';
+    // Project lead first (always included)
+    if (proj.projectLeadId && !seen.has(proj.projectLeadId)) {
+      seen.add(proj.projectLeadId);
+      const role = excelMemberRole(proj.projectLeadId, proj, t2);
+      const defPts = (proj.pointsConfig || {})[role] || (proj.pointsConfig || {}).Leader || 5;
+      const emp = employees.find(e => e.id === proj.projectLeadId);
+      list.push({ mid: proj.projectLeadId, role, defPts, kafuEmp: emp, source: 'project', teamName: teamNm });
+    }
+    // Only explicitly selected project members — team members are NOT auto-added
     (proj.projectMemberIds || []).forEach(mid => {
       if (seen.has(mid)) return; seen.add(mid);
+      const role = excelMemberRole(mid, proj, t2);
+      const defPts = (proj.pointsConfig || {})[role] || (proj.pointsConfig || {}).Contributor || (proj.pointsConfig || {}).Participant || 1;
       const emp = employees.find(e => e.id === mid);
-      const defPts = (proj.pointsConfig || {}).Participant || 1;
-      list.push({ mid, role: 'Participant', defPts, kafuEmp: emp, source: 'project', teamName: isAr ? 'مؤقت' : 'Temp' });
+      list.push({ mid, role, defPts, kafuEmp: emp, source: 'project', teamName: teamNm });
     });
     return list;
   };
@@ -7454,7 +7453,7 @@ const EmployeePortal = ({
   onNotifOpen = () => {},
   excelTeams = [], setExcelTeams = () => {},
   excelProjects = [], setExcelProjects = () => {},
-  excelPerms = {}, setExcelPerms = () => {},
+  excelPerms = {}, setExcelPerms = () => {}, onDeleteTeam = () => {}, onDeleteProject = () => {},
   excelPendingChanges = [], setExcelPendingChanges = () => {}
 }) => {
   const {
@@ -8820,7 +8819,7 @@ tab === "teams" && (isAnyLead
         excelTeams: excelTeams, setExcelTeams: setExcelTeams,
         excelProjects: excelProjects, setExcelProjects: setExcelProjects,
         excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges,
-        excelPerms: excelPerms, setExcelPerms: setExcelPerms,
+        excelPerms: excelPerms, setExcelPerms: setExcelPerms, onDeleteTeam: onDeleteTeam, onDeleteProject: onDeleteProject,
         onAddAchievement: onAdd
       })
     : /*#__PURE__*/React.createElement(EmployeeExcellenceView, { user: user, achievements: achievements, employees: employees, excelTeams: excelTeams, excelProjects: excelProjects, lang: lang, isDark: isDark, theme: th }))
@@ -9039,7 +9038,7 @@ const CoordinatorPortal = ({
   excelTeams = [], setExcelTeams = () => {},
   excelProjects = [], setExcelProjects = () => {},
   excelPendingChanges = [], setExcelPendingChanges = () => {},
-  excelPerms = {}, setExcelPerms = () => {}
+  excelPerms = {}, setExcelPerms = () => {}, onDeleteTeam = () => {}, onDeleteProject = () => {}
 }) => {
   const {
     theme: th
@@ -10444,7 +10443,7 @@ const CoordinatorPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: onAdd }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "coordinator", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onDeleteTeam: onDeleteTeam, onDeleteProject: onDeleteProject, onAddAchievement: onAdd }),
     tab === "reportsAdmin" && /*#__PURE__*/React.createElement(ReportsPanel, {
       achievements: achievements,
       employees: employees,
@@ -11384,7 +11383,7 @@ const AdminPortal = ({
   excelTeams = [], setExcelTeams = () => {},
   excelProjects = [], setExcelProjects = () => {},
   excelPendingChanges = [], setExcelPendingChanges = () => {},
-  excelPerms = {}, setExcelPerms = () => {}
+  excelPerms = {}, setExcelPerms = () => {}, onDeleteTeam = () => {}, onDeleteProject = () => {}
   ,addAch = null
   ,onDeleteAllAchievementsTeams = () => {}
   ,onDeleteAllEvaluations = () => {}
@@ -12727,7 +12726,7 @@ const AdminPortal = ({
       lang: lang, theme: th, Btn: Btn, Card: Card, Badge: Badge
     })
   )))),
-  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onAddAchievement: addAch }),
+  tab === "excellence" && /*#__PURE__*/React.createElement(ExcellenceTeamsPage, { user: user, achievements: achievements, employees: employees, criteria: criteria, t: t, lang: lang, isDark: isDark, theme: th, viewMode: "admin", excelTeams: excelTeams, setExcelTeams: setExcelTeams, excelProjects: excelProjects, setExcelProjects: setExcelProjects, excelPendingChanges: excelPendingChanges, setExcelPendingChanges: setExcelPendingChanges, excelPerms: excelPerms, setExcelPerms: setExcelPerms, onDeleteTeam: onDeleteTeam, onDeleteProject: onDeleteProject, onAddAchievement: addAch }),
     tab === "import" && /*#__PURE__*/React.createElement(ImportExportPanel, {
       achievements: achievements, employees: employees, setEmployees: setEmployees,
       addAch: addAch, onUpdate: onUpdate, excelTeams: excelTeams, setExcelTeams: setExcelTeams,
