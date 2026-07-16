@@ -5735,7 +5735,7 @@ const ExcellenceTeamsPage = ({
   const teamProjects = (viewMode === 'employee'
     ? visibleProjects
     : excelProjects
-  ).filter(p => p.teamIds.includes(selTeamId));
+  ).filter(p => (p.teamIds || []).includes(selTeamId));
 
   // ── Helpers ────────────────────────────────────────────────
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3000); };
@@ -5773,7 +5773,7 @@ const ExcellenceTeamsPage = ({
   };
   const deleteTeam = id => {
     setExcelTeams(prev => prev.filter(t2 => t2.id !== id));
-    setExcelProjects(prev => prev.filter(p => !p.teamIds.includes(id)));
+    setExcelProjects(prev => prev.filter(p => !(p.teamIds || []).includes(id)));
     if (selTeamId === id) setSelTeamId(visibleTeams[0]?.id || null);
     showToast(lang==='ar'?'🗑️ تم حذف الفريق':'🗑️ Team deleted');
     setShowDeleteConfirm(null);
@@ -7133,7 +7133,7 @@ const ExcelAwardModal = ({ proj, teams, employees, onAward, onClose, lang, th, i
 const ExcelPdfModal = ({ team, projects, employees, achievements, onClose, lang, th }) => {
   const isAr = lang === 'ar';
   const dir  = isAr ? 'rtl' : 'ltr';
-  const teamProjects = projects.filter(p => p.teamIds.includes(team.id));
+  const teamProjects = projects.filter(p => (p.teamIds || []).includes(team.id));
   const today = new Date().toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const stLabel = s => ({ completed: isAr?'مكتمل':'Completed', in_progress: isAr?'جارٍ':'In Progress', at_risk: isAr?'في خطر':'At Risk', not_started: isAr?'لم يبدأ':'Not Started' }[s] || s);
   const stBg = s => ({ completed: '#d1fae5', in_progress: '#dbeafe', at_risk: '#fee2e2', not_started: '#f1f5f9' }[s] || '#f1f5f9');
@@ -13517,6 +13517,7 @@ function App() {
         pointsParticipant:p.points_participant||1,
         members:(pmems||[]).filter(m=>m.project_id===p.id).map(m=>m.emp_id),
         teamId:((pteams||[]).find(pt=>pt.project_id===p.id)||{}).team_id||'',
+        teamIds:(pteams||[]).filter(pt=>pt.project_id===p.id).map(pt=>pt.team_id),
         createdAt:p.created_at,
       })));
       if (!silent) console.log('[KAFU] DB ready ✅');
