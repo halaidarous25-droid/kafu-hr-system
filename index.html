@@ -6938,31 +6938,41 @@ const ExcelProjModal = ({ proj, teamId, onSave, onClose, lang, th, employees, ex
       /* Project-specific temporary members */
       React.createElement('div', { style: { marginBottom: 13 } },
         React.createElement('label', { style: { ...lbSt, marginBottom: 6 } },
-          isAr ? '👤 أعضاء مؤقتون للمشروع' : '👤 Temporary Project Members'
+          isAr ? '👥 أعضاء المشروع' : '👥 Project Members'
         ),
         React.createElement('div', { style: { fontSize: 10, color: th.textFaint, marginBottom: 8 } },
           isAr
-            ? 'هؤلاء يشاركون في هذا المشروع فقط وليسوا أعضاءً دائمين في الفريق'
-            : 'These members participate in this project only — not permanent team members'
+            ? 'اختر المشاركين. ⭐ عضو فريق = من أعضاء الفريق الأساسيين · مشارك = مشارك في هذا المشروع فقط'
+            : 'Select participants. ⭐ Team = core team member · Guest = joins this project only'
         ),
         React.createElement('div', { style: { maxHeight: 180, overflowY: 'auto', border: `1px solid ${th.border}`, borderRadius: 10, padding: 8 } },
           kafuEmps
-            .filter(emp => !teamMembers.includes(emp.id))  // exclude existing team members
+            .slice()
+            .sort((a, b) => {
+              const aTeam = teamMembers.includes(a.id) ? 0 : 1;
+              const bTeam = teamMembers.includes(b.id) ? 0 : 1;
+              if (aTeam !== bTeam) return aTeam - bTeam;
+              return (isAr ? (a.nameAr || '') : (a.nameEn || '')).localeCompare(isAr ? (b.nameAr || '') : (b.nameEn || ''));
+            })
             .map(emp => {
               const checked = (form.projectMemberIds || []).includes(emp.id);
+              const isTeamMember = teamMembers.includes(emp.id);
               return React.createElement('label', { key: emp.id, style: { display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '5px 9px', borderRadius: 8, marginBottom: 2, background: checked ? 'rgba(16,185,129,.1)' : 'transparent', border: `1px solid ${checked ? '#10B981' : 'transparent'}`, transition: 'all .15s' } },
                 React.createElement('input', { type: 'checkbox', checked, onChange: () => toggleProjMember(emp.id), style: { accentColor: '#10B981', flexShrink: 0 } }),
                 React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                   React.createElement('div', { style: { fontSize: 11, fontWeight: 600, color: th.text } }, isAr ? (emp.nameAr || emp.nameEn) : (emp.nameEn || emp.nameAr)),
                   null
                 ),
+                isTeamMember
+                  ? React.createElement('span', { style: { fontSize: 9, color: '#6366f1', fontWeight: 800, background: 'rgba(99,102,241,.15)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' } }, isAr ? '⭐ عضو فريق' : '⭐ Team')
+                  : React.createElement('span', { style: { fontSize: 9, color: '#f59e0b', fontWeight: 800, background: 'rgba(245,158,11,.15)', borderRadius: 5, padding: '1px 6px', whiteSpace: 'nowrap' } }, isAr ? 'مشارك' : 'Guest'),
                 checked && React.createElement('span', { style: { fontSize: 9, color: '#10B981', fontWeight: 800, background: 'rgba(16,185,129,.15)', borderRadius: 5, padding: '1px 6px' } }, '✓')
               );
             })
         ),
         React.createElement('div', { style: { fontSize: 10, color: th.textFaint, marginTop: 5 } },
           isAr
-            ? `${(form.projectMemberIds || []).length} عضو مؤقت · أعضاء الفريق الأساسيون يشاركون تلقائياً`
+            ? `${(form.projectMemberIds || []).length} مشارك محدد`
             : `${(form.projectMemberIds || []).length} temp · Team members participate automatically`
         )
       ),
@@ -13516,6 +13526,7 @@ function App() {
         pointsLeader:p.points_leader||5,pointsContributor:p.points_contributor||3,
         pointsParticipant:p.points_participant||1,
         members:(pmems||[]).filter(m=>m.project_id===p.id).map(m=>m.emp_id),
+        projectMemberIds:(pmems||[]).filter(m=>m.project_id===p.id).map(m=>m.emp_id),
         teamId:((pteams||[]).find(pt=>pt.project_id===p.id)||{}).team_id||'',
         teamIds:(pteams||[]).filter(pt=>pt.project_id===p.id).map(pt=>pt.team_id),
         createdAt:p.created_at,
@@ -13630,14 +13641,14 @@ function App() {
         start_date:p.startDate||null,due_date:p.dueDate||null,notes:p.notes||'',
         points_leader:p.pointsLeader||5,points_contributor:p.pointsContributor||3,
         points_participant:p.pointsParticipant||1});
-      if(p.members){
+      const pmembers = p.projectMemberIds !== undefined ? p.projectMemberIds : p.members;
+      if(pmembers){
         await sbDelWhere('project_members','project_id',p.id);
-        if(p.members.length>0)await sbPost('project_members',p.members.map(id=>({project_id:p.id,emp_id:id})));
+        if(pmembers.length>0)await sbPost('project_members',pmembers.map(id=>({project_id:p.id,emp_id:id})));
       }
-      if(p.teamId){
-        await sbDelWhere('project_teams','project_id',p.id);
-        await sbPost('project_teams',{project_id:p.id,team_id:p.teamId});
-      }
+      const pteamList = p.teamIds !== undefined ? p.teamIds : (p.teamId ? [p.teamId] : []);
+      await sbDelWhere('project_teams','project_id',p.id);
+      if(pteamList.length>0)await sbPost('project_teams',pteamList.filter(Boolean).map(tid=>({project_id:p.id,team_id:tid})));
     }
   };
 // ===== END DB SYNC =====
