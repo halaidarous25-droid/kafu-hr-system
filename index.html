@@ -682,7 +682,7 @@ const TR = {
     admin_role: "مدير النظام",
     emp_role: "موظف",
     reportTitle: "تقرير إنجازات",
-    reportSub: "برنامج كافو — HR PMBAH",
+    reportSub: "برنامج كفو — HR PMBAH",
     resultsSummary: "📊 ملخص النتائج",
     kafuRatio: "نسبة KAFU",
     achCount: "إنجازات معتمدة",
@@ -1856,6 +1856,23 @@ const Modal = ({
 // Format an ISO date (yyyy-mm-dd) as dd/mm/yyyy
 const KAFU_MONTHS_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const KAFU_MONTHS_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const isoToDMY = (iso) => {
+  if (!iso) return "";
+  const parts = String(iso).split("T")[0].split("-");
+  if (parts.length === 3) return parts[2] + "-" + parts[1] + "-" + parts[0];
+  return iso;
+};
+const dmyToISO = (dmy) => {
+  if (!dmy) return "";
+  const s = String(dmy).trim();
+  const m = s.match(/^(\d{1,2})[\-\/.](\d{1,2})[\-\/.](\d{2,4})$/);
+  if (!m) return s.match(/^\d{4}-\d{2}-\d{2}$/) ? s : "";
+  let d = parseInt(m[1],10), mo = parseInt(m[2],10), y = m[3];
+  if (y.length === 2) y = String(parseInt(y,10) < 70 ? 2000+parseInt(y,10) : 1900+parseInt(y,10));
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+  const pad = n => String(n).padStart(2,"0");
+  return y + "-" + pad(mo) + "-" + pad(d);
+};
 const fmtDMY = (iso) => {
   if (!iso) return "";
   const parts = String(iso).split("T")[0].split("-");
@@ -1917,7 +1934,29 @@ const Inp = ({
       ...st,
       resize: "vertical"
     }
-  }) : /*#__PURE__*/React.createElement("input", {
+  }) : type === "dateDMY" ? /*#__PURE__*/React.createElement("div", {
+    style: { position: "relative", display: "flex", alignItems: "center" }
+  },
+    // نص يقبل ويعرض dd-mm-yyyy
+    /*#__PURE__*/React.createElement("input", {
+      value: isoToDMY(value),
+      onChange: e => { const iso = dmyToISO(e.target.value); onChange(iso); },
+      placeholder: "dd-mm-yyyy",
+      disabled: disabled,
+      maxLength: 10,
+      inputMode: "numeric",
+      style: { ...st, flex: 1, letterSpacing: 1 }
+    }),
+    // منتقي تقويم مصغّر بجانبه
+    /*#__PURE__*/React.createElement("input", {
+      type: "date",
+      value: value || "",
+      onChange: e => onChange(e.target.value),
+      disabled: disabled,
+      title: "📅",
+      style: { width: 34, marginInlineStart: -38, background: "transparent", border: "none", cursor: "pointer", opacity: .6 }
+    })
+  ) : /*#__PURE__*/React.createElement("input", {
     value: value,
     onChange: e => onChange(e.target.value),
     type: type,
@@ -1925,8 +1964,8 @@ const Inp = ({
     disabled: disabled,
     style: st
   }),
-  // dd/mm/yyyy hint for date inputs
-  type === "date" && value && /*#__PURE__*/React.createElement("div", {
+  // dd-mmm-yyyy hint for date inputs
+  (type === "date" || type === "dateDMY") && value && /*#__PURE__*/React.createElement("div", {
     style: { fontSize: 10, color: th.textMuted, marginTop: 3, fontWeight: 600 }
   }, "📅 " + fmtDMY(value)));
 };
@@ -3658,7 +3697,7 @@ const AddAchModal = ({
     label: t.dateLabel,
     value: f.date,
     onChange: s("date"),
-    type: "date",
+    type: "dateDMY",
     required: true
   }), /*#__PURE__*/React.createElement(Sel, {
     label: t.evalYear,
@@ -5348,7 +5387,7 @@ const EmployeeExcellenceView = ({
         role = 'Participant'; roleAr = 'مشارك'; roleEn = 'Participant'; roleIcon = '👤';
       }
 
-      const linkedTeams = (p.teamIds || []).map(function(tid) {
+      const linkedTeams = [...new Set(p.teamIds || [])].map(function(tid) {
         return excelTeams.find(function(t) { return t.id === tid; });
       }).filter(Boolean);
 
@@ -5728,8 +5767,9 @@ const ExcellenceTeamsPage = ({
   const canAddProject = can('addProject');
   const canEditProject = can('editProject');
   const canUpdateStatus = can('modifyProject');
-  // Progress bar (شريط الإنجاز) is restricted to admin/coordinator — leads cannot change it
-  const canEditProgress = viewMode === 'admin' || viewMode === 'coordinator';
+  // Progress bar (شريط الإنجاز): admin/coordinator always, plus team lead of the
+  // owning team and the project's own lead (they can update their projects' progress)
+  const canEditProgress = viewMode === 'admin' || viewMode === 'coordinator' || can('modifyProject');
   const canAwardPoints = can('awardPoints');
   const canApprovePoints = can('approvePoints');
   // My role label for display
@@ -5816,29 +5856,10 @@ const ExcellenceTeamsPage = ({
 
   // Update project status/progress — direct for admin/coord, pending request for leads
   const updateProjStatus = (projId, updates) => {
-    if (canApprovePoints) {
-      // Has approval permission (admin/coordinator): apply directly
-      setExcelProjects(prev => prev.map(p => p.id === projId ? {...p,...updates} : p));
-      showToast(lang==='ar'?'✅ تم التحديث':'✅ Updated');
-    } else {
-      // Team lead / Project lead: create pending request awaiting approval
-      const proj = excelProjects.find(p => p.id === projId);
-      const req = {
-        id: Date.now(),
-        type: 'project_update',
-        projId,
-        projNameAr: proj?.nameAr || projId,
-        projNameEn: proj?.nameEn || projId,
-        proposedBy: user.id,
-        proposedByName: lang==='ar'? user.nameAr||user.nameEn : user.nameEn||user.nameAr,
-        proposedRole: myRoleInProj || myRoleInTeam,
-        updates,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
-      setPendingChanges(prev => [...prev, req]);
-      showToast(lang==='ar'?'📨 تم إرسال الطلب للمراجعة':'📨 Request sent for review');
-    }
+    // Anyone with modify permission (admin/coordinator/team lead/project lead)
+    // updates the project directly; setExcelProjects persists to the DB.
+    setExcelProjects(prev => prev.map(p => p.id === projId ? {...p,...updates} : p));
+    showToast(lang==='ar'?'✅ تم التحديث':'✅ Updated');
   };
 
   // Approve a pending change (coord/admin)
@@ -5861,7 +5882,7 @@ const ExcellenceTeamsPage = ({
     showToast(lang==='ar'?'❌ تم رفض الطلب':'❌ Request rejected');
   };
 
-  // Save notes
+  // Save notes (persists to DB via setExcelProjects → setExcelProjectsDB)
   const saveNotes = (projId, notes) => {
     setExcelProjects(prev => prev.map(p => p.id === projId ? {...p, notes} : p));
     setShowNotesModal(false);
@@ -7482,28 +7503,42 @@ const EmployeePortal = ({
     );
     if (mine.length === 0) return;
 
-    // Show once per "points signature" — reappears only when new points are approved
-    const SIG_KEY = "kafu_welcome_" + user.id;
-    const totalPts = mine.reduce((s, a) => s + (a.points || 0), 0);
-    const signature = mine.length + ":" + totalPts;
-    let lastSig = "";
-    try { lastSig = localStorage.getItem(SIG_KEY) || ""; } catch (e) {}
-    if (lastSig === signature) {
-      welcomeShownRef.current = true;   // nothing new since last time
+    // Show congrats only for NEW achievements since the employee last saw the popup.
+    // We track the set of already-seen achievement ids (not a cumulative total).
+    const SEEN_KEY = "kafu_welcome_seen_" + user.id;
+    let seenIds = [];
+    try { seenIds = JSON.parse(localStorage.getItem(SEEN_KEY) || "[]"); } catch (e) { seenIds = []; }
+    const seenSet = new Set(seenIds);
+    const allIds = mine.map(a => a.id).filter(Boolean);
+
+    // First time ever (no record): seed as seen, don't congratulate on the whole backlog.
+    let hasRecord = true;
+    try { hasRecord = localStorage.getItem(SEEN_KEY) !== null; } catch (e) { hasRecord = false; }
+    if (!hasRecord) {
+      try { localStorage.setItem(SEEN_KEY, JSON.stringify(allIds)); } catch (e) {}
+      welcomeShownRef.current = true;
       return;
     }
+
+    // Only the achievements not seen before = the latest ones to celebrate
+    const fresh = mine.filter(a => a.id && !seenSet.has(a.id));
+    if (fresh.length === 0) {
+      welcomeShownRef.current = true;   // nothing new
+      return;
+    }
+    const totalPts = fresh.reduce((s, a) => s + (a.points || 0), 0);
 
     const critName = (id) => {
       const c = criteria.find(x => x.id === id);
       return c ? (lang === "ar" ? (c.nameAr || c.id) : (c.nameEn || c.id)) : (id || "");
     };
     const isExcel = (a) => a.source === "excellence" || a.teamId || a.projectId;
-    const items = mine
+    const items = fresh
       .slice()
       .sort((x, y) => (y.date || "").localeCompare(x.date || ""))
       .map(a => ({
         title: a.description || critName(a.criteriaId),
-        sub: (a.date || "") + (isExcel(a)
+        sub: (fmtDMY(a.date) || "") + (isExcel(a)
               ? (lang === "ar" ? " • فرق التميز" : " • Excellence Teams")
               : (lang === "ar" ? " • إنجاز" : " • Achievement")),
         pts: a.points || 0
@@ -7511,7 +7546,7 @@ const EmployeePortal = ({
 
     setWelcomePts({ items, total: totalPts });
     welcomeShownRef.current = true;
-    try { localStorage.setItem(SIG_KEY, signature); } catch (e) {}
+    try { localStorage.setItem(SEEN_KEY, JSON.stringify(allIds)); } catch (e) {}
   }, [user, achievements, criteria, lang]);
   const [tab, setTab] = useState("home");
   // ── EMPLOYEE NOTIFICATIONS: built from own achievements ──
@@ -7659,6 +7694,22 @@ const EmployeePortal = ({
     pts,
     emp: employees.find(e => e.id === id)
   }));
+  // ── القائمة التنافسية: المراكز القريبة من الموظف (2 فوقه + هو + 2 تحته) ──
+  const fullRanking = Object.entries(achievements.filter(a => a.status === "approved" && yearToCalYear(a.year) === calY).reduce((acc, a) => {
+    acc[a.empId] = (acc[a.empId] || 0) + a.points;
+    return acc;
+  }, {})).sort((a, b) => b[1] - a[1]).map(([id, pts], idx) => ({
+    id, pts, rank: idx + 1, emp: employees.find(e => e.id === id)
+  }));
+  const myRankIdx = fullRanking.findIndex(r => r.id === user.id);
+  const nearMe = myRankIdx >= 0
+    ? (() => {
+        let start = Math.max(0, myRankIdx - 2);
+        let end = Math.min(fullRanking.length, start + 5);
+        start = Math.max(0, end - 5); // ensure we always show up to 5
+        return fullRanking.slice(start, end);
+      })()
+    : [];
   const sb = s => s === "approved" ? /*#__PURE__*/React.createElement(Badge, {
     text: "\u2705",
     color: "#10b981",
@@ -8642,7 +8693,35 @@ const EmployeePortal = ({
     text: `${e.pts}pts`,
     color: "#6366f1",
     small: true
-  })))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
+  })))), nearMe.length > 0 && /*#__PURE__*/React.createElement(Card, {
+    style: { marginBottom: 14, border: `1px solid #10B98155` }
+  }, /*#__PURE__*/React.createElement("h3", {
+    style: { fontSize: 13, marginBottom: 4, color: th.text }
+  }, "🎯 ", lang === "ar" ? "محيطك التنافسي" : "Your Competitive Circle", " — ", calY),
+    /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 10, color: th.textMuted, marginBottom: 11 }
+    }, lang === "ar" ? "مركزك بين الزملاء القريبين منك — خطوة واحدة تصعد بك" : "Your standing among nearby colleagues — one step lifts you up"),
+    nearMe.map(r => /*#__PURE__*/React.createElement("div", {
+      key: r.id,
+      style: {
+        display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
+        borderRadius: 10, marginBottom: 4,
+        background: r.id === user.id ? "rgba(16,185,129,.12)" : "transparent",
+        border: r.id === user.id ? "1px solid #10B981" : "1px solid transparent"
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: { fontSize: 13, fontWeight: 800, color: r.id === user.id ? "#10B981" : th.textMuted, minWidth: 30 }
+    }, "#" + r.rank), /*#__PURE__*/React.createElement("div", {
+      style: { flex: 1 }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 12, fontWeight: 700, color: r.id === user.id ? "#10B981" : th.text }
+    }, displayName(r.emp, lang), r.id === user.id ? ` ${t.youLabel}` : ""), /*#__PURE__*/React.createElement("div", {
+      style: { fontSize: 10, color: th.textMuted }
+    }, r.emp?.dept)), /*#__PURE__*/React.createElement(Badge, {
+      text: `${r.pts}pts`,
+      color: r.id === user.id ? "#10B981" : "#94a3b8",
+      small: true
+    })))), /*#__PURE__*/React.createElement(Card, null, /*#__PURE__*/React.createElement("h3", {
     style: {
       fontSize: 13,
       marginBottom: 13,
@@ -13537,7 +13616,7 @@ function App() {
         members:(pmems||[]).filter(m=>m.project_id===p.id).map(m=>m.emp_id),
         projectMemberIds:(pmems||[]).filter(m=>m.project_id===p.id).map(m=>m.emp_id),
         teamId:((pteams||[]).find(pt=>pt.project_id===p.id)||{}).team_id||'',
-        teamIds:(pteams||[]).filter(pt=>pt.project_id===p.id).map(pt=>pt.team_id),
+        teamIds:[...new Set((pteams||[]).filter(pt=>pt.project_id===p.id).map(pt=>pt.team_id))],
         createdAt:p.created_at,
       })));
       if (!silent) console.log('[KAFU] DB ready ✅');
@@ -13652,12 +13731,14 @@ function App() {
         points_participant:p.pointsParticipant||1});
       const pmembers = p.projectMemberIds !== undefined ? p.projectMemberIds : p.members;
       if(pmembers){
+        const uniqMembers = [...new Set(pmembers.filter(Boolean))];
         await sbDelWhere('project_members','project_id',p.id);
-        if(pmembers.length>0)await sbPost('project_members',pmembers.map(id=>({project_id:p.id,emp_id:id})));
+        if(uniqMembers.length>0)await sbPost('project_members',uniqMembers.map(id=>({project_id:p.id,emp_id:id})));
       }
       const pteamList = p.teamIds !== undefined ? p.teamIds : (p.teamId ? [p.teamId] : []);
+      const uniqTeams = [...new Set(pteamList.filter(Boolean))];
       await sbDelWhere('project_teams','project_id',p.id);
-      if(pteamList.length>0)await sbPost('project_teams',pteamList.filter(Boolean).map(tid=>({project_id:p.id,team_id:tid})));
+      if(uniqTeams.length>0)await sbPost('project_teams',uniqTeams.map(tid=>({project_id:p.id,team_id:tid})));
     }
   };
 // ===== END DB SYNC =====
