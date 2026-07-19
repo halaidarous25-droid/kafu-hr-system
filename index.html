@@ -5743,8 +5743,10 @@ const ExcellenceTeamsPage = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(null);
 
   // Derive active team (auto-fallback to first visible if nothing selected)
-  const selTeam = excelTeams.find(t2 => t2.id === selTeamId)
-    || (visibleTeams.length > 0 ? visibleTeams[0] : null);
+  const selTeam = selTeamId === '__no_team__'
+    ? { id: '__no_team__', nameAr: 'مشاريع بلا فريق', nameEn: 'Projects without a team', color: '#64748b', icon: '📁', leadId: '', descAr: '', descEn: '' }
+    : (excelTeams.find(t2 => t2.id === selTeamId)
+    || (visibleTeams.length > 0 ? visibleTeams[0] : null));
   const selProj = selProjId ? excelProjects.find(p => p.id === selProjId) : null;
 
   // Is current user a team lead or project lead?
@@ -5793,7 +5795,9 @@ const ExcellenceTeamsPage = ({
   const teamProjects = (viewMode === 'employee'
     ? visibleProjects
     : excelProjects
-  ).filter(p => (p.teamIds || []).includes(selTeamId));
+  ).filter(p => selTeamId === '__no_team__'
+      ? !(p.teamIds && p.teamIds.length)   // مشاريع غير مرتبطة بأي فريق
+      : (p.teamIds || []).includes(selTeamId));
 
   // ── Helpers ────────────────────────────────────────────────
   const showToast = msg => { setToast(msg); setTimeout(()=>setToast(null), 3000); };
@@ -6089,7 +6093,21 @@ const ExcellenceTeamsPage = ({
                   transition:'all .2s'
                 }
               }, tm.icon+' '+(lang==='ar'?tm.nameAr:tm.nameEn))
-            )
+            ),
+            (viewMode==='admin'||viewMode==='coordinator') &&
+              excelProjects.some(p=>!(p.teamIds&&p.teamIds.length)) &&
+              React.createElement('button',{
+                key:'__no_team__',
+                onClick:()=>{setSelTeamId('__no_team__');setSelProjId(null);setActiveTab('overview');},
+                style:{
+                  padding:'8px 14px',borderRadius:12,border:'1px dashed '+th.border,
+                  cursor:'pointer',fontWeight:700,fontSize:11,whiteSpace:'nowrap',
+                  fontFamily:'inherit',
+                  background: selTeamId==='__no_team__' ? '#64748b' : th.surface,
+                  color: selTeamId==='__no_team__' ? '#fff' : th.textMuted,
+                  transition:'all .2s'
+                }
+              }, '📁 '+(lang==='ar'?'مشاريع بلا فريق':'Projects without a team'))
           ),
 
       // ── CONTENT AREA ────────────────────────────────────────
