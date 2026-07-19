@@ -6216,39 +6216,7 @@ const ExcellenceTeamsPage = ({
             )
           ),
 
-          // RACI Matrix
-          React.createElement('div',{style:card},
-            React.createElement('div',{style:{fontWeight:800,fontSize:13,color:th.text,marginBottom:14}},
-              lang==='ar'?'🔷 مصفوفة RACI':'🔷 RACI Matrix'
-            ),
-            React.createElement('div',{style:{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:10}},
-              [
-                {k:'R',l:lang==='ar'?'R — مسؤول التنفيذ':'R — Responsible',c:'#3B82F6'},
-                {k:'A',l:lang==='ar'?'A — المحاسَب':'A — Accountable',c:'#10B981'},
-                {k:'C',l:lang==='ar'?'C — يُستشار':'C — Consulted',c:'#F59E0B'},
-                {k:'I',l:lang==='ar'?'I — يُبلَّغ':'I — Informed',c:'#8B5CF6'}
-              ].map(({k,l,c})=>
-                React.createElement('div',{key:k,style:{
-                  background:c+'10',border:`1px solid ${c}25`,borderRadius:11,padding:12
-                }},
-                  React.createElement('div',{style:{fontWeight:800,fontSize:11,color:c,marginBottom:8}},l),
-                  (() => {
-                    const val = (selProj.raci||{})[k];
-                    const ids = Array.isArray(val) ? val : (val ? [val] : []);
-                    if (!ids.length) return React.createElement('div',{style:{fontSize:10,color:th.textFaint}},lang==='ar'?'—':'—');
-                    return ids.map(uid=>
-                      React.createElement('div',{key:uid,style:{
-                        background:c+'18',borderRadius:7,padding:'3px 8px',
-                        fontSize:10,color:th.text,marginBottom:3
-                      }}, mname(uid))
-                    );
-                  })()
-                )
-              )
-            )
-          ),
-
-          // Points config & member roles
+                    // Points config & member roles
           React.createElement('div',{style:card},
             React.createElement('div',{style:{fontWeight:800,fontSize:13,color:th.text,marginBottom:12}},
               lang==='ar'?'⭐ توزيع النقاط على الأعضاء':'⭐ Points per Role'
