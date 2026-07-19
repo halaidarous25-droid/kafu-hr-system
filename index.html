@@ -682,7 +682,7 @@ const TR = {
     admin_role: "مدير النظام",
     emp_role: "موظف",
     reportTitle: "تقرير إنجازات",
-    reportSub: "برنامج كفو — HR PMBAH",
+    reportSub: "برنامج كفو — KAFU PROGRAM",
     resultsSummary: "📊 ملخص النتائج",
     kafuRatio: "نسبة KAFU",
     achCount: "إنجازات معتمدة",
@@ -879,7 +879,7 @@ const TR = {
     admin_role: "System Admin",
     emp_role: "Employee",
     reportTitle: "Achievement Report",
-    reportSub: "KAFU Program — HR PMBAH",
+    reportSub: "KAFU Program — KAFU PROGRAM",
     resultsSummary: "📊 Results Summary",
     kafuRatio: "KAFU Ratio",
     achCount: "Approved Achievements",
@@ -7686,7 +7686,10 @@ const EmployeePortal = ({
     [id]: !p[id]
   }));
   const calY = yearToCalYear(myYear);
-  const top5 = Object.entries(achievements.filter(a => a.status === "approved" && yearToCalYear(a.year) === calY).reduce((acc, a) => {
+  // Top 5 across the WHOLE program during the current program year (by achievement date),
+  // independent of this employee's own evaluation year.
+  const PROG_CY = new Date().getFullYear().toString();
+  const top5 = Object.entries(achievements.filter(a => a.status === "approved" && (a.date || "").slice(0, 4) === PROG_CY).reduce((acc, a) => {
     acc[a.empId] = (acc[a.empId] || 0) + a.points;
     return acc;
   }, {})).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, pts]) => ({
@@ -7695,7 +7698,7 @@ const EmployeePortal = ({
     emp: employees.find(e => e.id === id)
   }));
   // ── القائمة التنافسية: المراكز القريبة من الموظف (2 فوقه + هو + 2 تحته) ──
-  const fullRanking = Object.entries(achievements.filter(a => a.status === "approved" && yearToCalYear(a.year) === calY).reduce((acc, a) => {
+  const fullRanking = Object.entries(achievements.filter(a => a.status === "approved" && (a.date || "").slice(0, 4) === PROG_CY).reduce((acc, a) => {
     acc[a.empId] = (acc[a.empId] || 0) + a.points;
     return acc;
   }, {})).sort((a, b) => b[1] - a[1]).map(([id, pts], idx) => ({
@@ -8661,7 +8664,7 @@ const EmployeePortal = ({
       marginBottom: 13,
       color: th.text
     }
-  }, t.top5Cols, " \u2014 ", calY), top5.map((e, i) => /*#__PURE__*/React.createElement("div", {
+  }, t.top5Cols, " \u2014 ", PROG_CY), top5.map((e, i) => /*#__PURE__*/React.createElement("div", {
     key: e.id,
     style: {
       display: "flex",
@@ -8697,7 +8700,7 @@ const EmployeePortal = ({
     style: { marginBottom: 14, border: `1px solid #10B98155` }
   }, /*#__PURE__*/React.createElement("h3", {
     style: { fontSize: 13, marginBottom: 4, color: th.text }
-  }, "🎯 ", lang === "ar" ? "محيطك التنافسي" : "Your Competitive Circle", " — ", calY),
+  }, "🎯 ", lang === "ar" ? "محيطك التنافسي" : "Your Competitive Circle", " — ", PROG_CY),
     /*#__PURE__*/React.createElement("div", {
       style: { fontSize: 10, color: th.textMuted, marginBottom: 11 }
     }, lang === "ar" ? "مركزك بين الزملاء القريبين منك — خطوة واحدة تصعد بك" : "Your standing among nearby colleagues — one step lifts you up"),
@@ -13286,7 +13289,7 @@ const Login = ({
       fontSize: 11,
       marginTop: 4
     }
-  }, "\u0646\u0638\u0627\u0645 \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0633\u0646\u0648\u064A \u2014 HR PMBAH"), /*#__PURE__*/React.createElement("div", {
+  }, "\u0646\u0638\u0627\u0645 \u0646\u0642\u0627\u0637 \u0627\u0644\u062A\u0642\u064A\u064A\u0645 \u0627\u0644\u0633\u0646\u0648\u064A \u2014 KAFU PROGRAM"), /*#__PURE__*/React.createElement("div", {
     style: {
       color: theme.textFaint,
       fontSize: 10,
