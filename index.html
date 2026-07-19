@@ -5847,7 +5847,8 @@ const ExcellenceTeamsPage = ({
       showToast(lang==='ar'?'✅ تم تعديل المشروع':'✅ Project updated');
     } else {
       const np = {
-        ...form, id:'ep'+(Date.now()), teamIds:[selTeamId],
+        ...form, id:'ep'+(Date.now()),
+        teamIds: (form.teamIds && form.teamIds.length) ? form.teamIds : (selTeamId && selTeamId !== '__no_team__' ? [selTeamId] : []),
         pointsAwarded:false, notes:'',
         pointsConfig: form.pointsConfig || {Leader:5,Contributor:3,Participant:1},
         projectMemberIds: form.projectMemberIds || [],
@@ -6906,6 +6907,7 @@ const ExcelProjModal = ({ proj, teamId, onSave, onClose, lang, th, employees, ex
     nameAr: '', nameEn: '', descAr: '', status: 'not_started', progress: 0,
     projectLeadId: '', startDate: '', dueDate: '',
     projectMemberIds: [],   // temporary project-specific members
+    teamIds: teamId ? [teamId] : [],   // owning team(s)
     pointsConfig: { Leader: 5, Contributor: 3, Participant: 1 }
   });
   const s = k => v => setForm(p => ({ ...p, [k]: v }));
@@ -6935,6 +6937,33 @@ const ExcelProjModal = ({ proj, teamId, onSave, onClose, lang, th, employees, ex
         React.createElement('div', { style: { marginBottom: 13 } },
           React.createElement('label', { style: lbSt }, isAr ? 'اسم EN' : 'Name EN'),
           React.createElement('input', { value: form.nameEn || '', onChange: e => s('nameEn')(e.target.value), style: iSt })
+        ),
+        React.createElement('div', { style: { marginBottom: 13 } },
+          React.createElement('label', { style: lbSt }, isAr ? 'الفريق المسؤول' : 'Owning Team'),
+          React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+            (excelTeams || []).length === 0
+              ? React.createElement('div', { style: { fontSize: 11, color: th.textMuted } }, isAr ? 'لا توجد فرق' : 'No teams')
+              : (excelTeams || []).map(function(tm) {
+                  var sel = (form.teamIds || []).indexOf(tm.id) >= 0;
+                  return React.createElement('button', {
+                    key: tm.id,
+                    type: 'button',
+                    onClick: function() { setForm(function(p) {
+                      var cur = p.teamIds || [];
+                      var next = cur.indexOf(tm.id) >= 0 ? cur.filter(function(x){return x !== tm.id;}) : cur.concat([tm.id]);
+                      return Object.assign({}, p, { teamIds: next });
+                    }); },
+                    style: {
+                      padding: '6px 12px', borderRadius: 9, cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                      fontFamily: 'inherit', border: '1px solid ' + (sel ? (tm.color || '#6366f1') : th.border),
+                      background: sel ? (tm.color || '#6366f1') : 'transparent',
+                      color: sel ? '#fff' : th.textMuted
+                    }
+                  }, (tm.icon || '👥') + ' ' + (isAr ? tm.nameAr : tm.nameEn));
+                })
+          ),
+          React.createElement('div', { style: { fontSize: 10, color: th.textMuted, marginTop: 5 } },
+            isAr ? 'اختر فريقًا واحدًا أو أكثر ليظهر المشروع تحته' : 'Select one or more teams to list the project under')
         ),
         React.createElement('div', { style: { marginBottom: 13 } },
           React.createElement('label', { style: lbSt }, isAr ? 'البداية' : 'Start'),
