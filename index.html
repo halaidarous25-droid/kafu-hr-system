@@ -13549,7 +13549,7 @@ function App() {
         subId:a.sub_id,description:a.description||'',date:a.date||'',
         role:a.role||'',points:a.points||0,status:a.status||'pending',
         month:a.month,year:a.year||'',evalYear:a.eval_year||'',
-        rejectionReason:a.rejection_reason||'',attachment:a.attachment||'',
+        rejectionReason:a.rejection_reason||'',attachment:(()=>{const v=a.attachment;if(!v)return'';if(typeof v==='object')return v;const s=String(v);if(s.charAt(0)==='{'){try{return JSON.parse(s);}catch(e){return s;}}return s;})(),
         createdAt:a.created_at||'',source:a.source||'manual',
         teamId:a.team_id||'',projectId:a.project_id||'',
       })));
@@ -13634,12 +13634,19 @@ function App() {
   const addAchDB=async(a)=>{
     const st=a.status||'pending';
     const mo=a.month||(a.date?(new Date(a.date).getMonth()+1):1);
+    // Serialize attachment object (name/type/b64/...) to JSON text for the DB
+    let attachStr='';
+    if(a.attachment){
+      if(typeof a.attachment==='string')attachStr=a.attachment;
+      else try{attachStr=JSON.stringify(a.attachment);}catch(e){attachStr='';}
+    }
     const saved=await sbPost('achievements',{
       emp_id:a.empId,criteria_id:a.criteriaId,sub_id:a.subId,
       description:a.description||'',date:(a.date||null),role:a.role||'',
       points:a.points||0,status:st,month:mo,
       year:a.year||'',eval_year:a.evalYear||'',source:a.source||'manual',
       team_id:a.teamId||null,project_id:a.projectId||null,
+      attachment:attachStr,
     });
     if(!saved)throw new Error('save failed');
     setAchs(p=>[...p,{...a,id:String(saved.id),status:st,createdAt:saved.created_at}]);
