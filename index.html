@@ -3483,7 +3483,7 @@ const AddAchModal = ({
     description: "",
     date: "",
     role: "Contributor",
-    year: user?.evalYear || "2024-2025"
+    year: computeEvalYear(user) || user?.evalYear || "2024-2025"
   };
   const [f, setF] = useState(EMPTY);
   const [targetEmp, setTargetEmp] = useState("");
@@ -4823,7 +4823,7 @@ const PdfReport = ({
     /*#__PURE__*/React.createElement("div", {
       style: { fontSize: 13, fontWeight: 800, color: "#1e293b", marginBottom: 12, marginTop: 6,
         display: "flex", alignItems: "center", gap: 8 }
-    }, "\uD83C\uDFC6 ", (lang === "ar" ? "المشاركة في فرق الامتياز" : "Excellence Teams Participation")
+    }, "\uD83C\uDFC6 ", (lang === "ar" ? "المشاركة في فرق التميز" : "Excellence Teams Participation")
         + (selectedYear ? " — " + selectedYear : "")),
     // Summary chips (deduplicated counts)
     /*#__PURE__*/React.createElement("div", {
@@ -4832,7 +4832,7 @@ const PdfReport = ({
       [
         { v: uniqMyTeams.length, l: lang === "ar" ? "فرق" : "Teams", c: "#6366f1" },
         { v: uniqMyProjects.length, l: lang === "ar" ? "مشاريع" : "Projects", c: "#3b82f6" },
-        { v: excelPts, l: lang === "ar" ? "نقاط الامتياز" : "Excellence Pts", c: "#f59e0b" }
+        { v: excelPts, l: lang === "ar" ? "نقاط التميز" : "Excellence Pts", c: "#f59e0b" }
       ].map(s => /*#__PURE__*/React.createElement("div", {
         key: s.l,
         style: { background: s.c + "12", border: "1px solid " + s.c + "30", borderRadius: 9,
@@ -5034,7 +5034,7 @@ const PdfReport = ({
 
 // ══════════════════════════════════════════════════════════════
 // EXCELLENCE TEAMS — DATA + ENGINE + COMPONENTS
-// فرق الامتياز — البيانات والمحرك والمكونات
+// فرق التميز — البيانات والمحرك والمكونات
 // ══════════════════════════════════════════════════════════════
 
 const EXCEL_TEAMS_INIT = [
@@ -5296,7 +5296,7 @@ function excelBuildKafuAch(empId, proj, team, overridePts, status, evalYear, ach
 
 
 // ══════════════════════════════════════════════════════════════
-// EmployeeExcellenceView — شاشة سجل فرق الامتياز للموظف
+// EmployeeExcellenceView — شاشة سجل فرق التميز للموظف
 // تُعرض بدلاً من ExcellenceTeamsPage عندما viewMode === 'employee'
 // ══════════════════════════════════════════════════════════════
 const EmployeeExcellenceView = ({
@@ -5408,7 +5408,7 @@ const EmployeeExcellenceView = ({
         isAr ? 'لا توجد مشاركات بعد' : 'No Participations Yet'
       ),
       RE('div', { style: { color: th.textMuted, fontSize: 13 } },
-        isAr ? 'لم يتم تعيينك في أي فريق امتياز حتى الآن.' : 'You have not been assigned to any Excellence Team yet.'
+        isAr ? 'لم يتم تعيينك في أي فريق تميز حتى الآن.' : 'You have not been assigned to any Excellence Team yet.'
       )
     );
   }
@@ -5427,7 +5427,7 @@ const EmployeeExcellenceView = ({
           RE('div', { style: { fontSize: 36 } }, '🏆'),
           RE('div', null,
             RE('div', { style: { color: '#fff', fontWeight: 900, fontSize: 17, marginBottom: 3 } },
-              isAr ? 'سجلي في فرق الامتياز' : 'My Excellence Teams Record'
+              isAr ? 'سجلي في فرق التميز' : 'My Excellence Teams Record'
             ),
             RE('div', { style: { color: 'rgba(255,255,255,.65)', fontSize: 12 } },
               (isAr ? user.nameAr || user.nameEn : user.nameEn || user.nameAr) || ''
@@ -5984,7 +5984,7 @@ const ExcellenceTeamsPage = ({
           React.createElement('div',{style:{fontSize:36}},'🏆'),
           React.createElement('div',null,
             React.createElement('div',{style:{color:'#fff',fontWeight:900,fontSize:17,marginBottom:3}},
-              lang==='ar'?'فرق الامتياز':'HR Excellence Teams'
+              lang==='ar'?'فرق التميز':'HR Excellence Teams'
             ),
             React.createElement('div',{style:{color:'rgba(255,255,255,.7)',fontSize:11}},
               (viewMode==='admin'
@@ -6725,7 +6725,7 @@ const ExcelPermPanel = ({ perms, onSave, onClose, lang, th }) => {
   ];
 
   const ACTIONS = [
-    { id: 'addTeam',       ar: 'إضافة فريق جديد',       en: 'Add New Team',        icon: '➕', desc_ar: 'من يستطيع إنشاء فرق امتياز جديدة', desc_en: 'Who can create new excellence teams' },
+    { id: 'addTeam',       ar: 'إضافة فريق جديد',       en: 'Add New Team',        icon: '➕', desc_ar: 'من يستطيع إنشاء فرق تميز جديدة', desc_en: 'Who can create new excellence teams' },
     { id: 'editTeam',      ar: 'تعديل الفريق والأعضاء',  en: 'Edit Team & Members', icon: '✏️', desc_ar: 'من يستطيع تعديل تفاصيل الفريق وأعضائه', desc_en: 'Who can edit team details and members' },
     { id: 'addProject',    ar: 'إضافة مشروع جديد',      en: 'Add New Project',     icon: '📂', desc_ar: 'من يستطيع إنشاء مشاريع جديدة', desc_en: 'Who can create new projects' },
     { id: 'editProject',   ar: 'تعديل المشروع والمشاركين', en: 'Edit Project & Participants', icon: '🗂️', desc_ar: 'من يستطيع تعديل تفاصيل المشروع ومشاركيه', desc_en: 'Who can edit project details and participants' },
@@ -6745,7 +6745,7 @@ const ExcelPermPanel = ({ perms, onSave, onClose, lang, th }) => {
     });
   };
 
-  return React.createElement(Modal, { open: true, onClose: onClose, title: isAr ? '⚙️ لوحة تحكم فرق الامتياز' : '⚙️ Excellence Teams Control Panel', wide: true },
+  return React.createElement(Modal, { open: true, onClose: onClose, title: isAr ? '⚙️ لوحة تحكم فرق التميز' : '⚙️ Excellence Teams Control Panel', wide: true },
     React.createElement('div', { style: { marginBottom: 14 } },
       React.createElement('div', { style: { fontSize: 12, color: th.textMuted, marginBottom: 4 } },
         isAr ? 'حدّد الأدوار المسموح لها بكل إجراء. التغييرات تنعكس على كامل البرنامج فوراً.'
@@ -7177,7 +7177,7 @@ const ExcelPdfModal = ({ team, projects, employees, achievements, onClose, lang,
     overlay.id = "kafu-excelmodal-overlay";
     overlay.setAttribute("dir", dir);
     overlay.innerHTML = sanitizePrintHtml(elx.innerHTML)
-      + '<div class="footer">' + (isAr ? "تقرير فرق الامتياز \u2014 برنامج كفو MNGHA \u00b7 " : "Excellence Teams Report \u2014 KAFU MNGHA \u00b7 ") + today + '</div>';
+      + '<div class="footer">' + (isAr ? "تقرير فرق التميز \u2014 برنامج كفو MNGHA \u00b7 " : "Excellence Teams Report \u2014 KAFU MNGHA \u00b7 ") + today + '</div>';
     document.body.appendChild(overlay);
     const reportCss = `
 *{margin:0;padding:0;box-sizing:border-box}
@@ -7246,7 +7246,7 @@ tr:nth-child(even) td{background:#fafafa}
           React.createElement('div', { className: 'icon' }, team.icon || '🏆'),
           React.createElement('div', null,
             React.createElement('h1', null, isAr ? team.nameAr : team.nameEn),
-            React.createElement('p', null, (isAr ? 'تقرير فريق الامتياز — ' : 'Excellence Team Report — ') + today)
+            React.createElement('p', null, (isAr ? 'تقرير فريق التميز — ' : 'Excellence Team Report — ') + today)
           )
         ),
         React.createElement('div', { className: 'stats' },
@@ -7693,7 +7693,7 @@ const EmployeePortal = ({
     id: "tips",
     label: t.tips,
     icon: "💡"
-  }, { id: "teams", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" }];
+  }, { id: "teams", label: lang === "ar" ? "فرق التميز" : "Excellence Teams", icon: "🏆" }];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
@@ -8147,7 +8147,7 @@ const EmployeePortal = ({
       /*#__PURE__*/React.createElement("div", { style: { fontSize: 34 } }, "🏆"),
       /*#__PURE__*/React.createElement("div", null,
         /*#__PURE__*/React.createElement("div", { style: { color: "#fff", fontWeight: 900, fontSize: 14 } },
-          lang === "ar" ? "مشاركتي في فرق الامتياز" : "My Excellence Teams"
+          lang === "ar" ? "مشاركتي في فرق التميز" : "My Excellence Teams"
         ),
         /*#__PURE__*/React.createElement("div", { style: { color: "rgba(255,255,255,.6)", fontSize: 11, marginTop: 2 } },
           lang === "ar" ? "اضغط لعرض التفاصيل ←" : "Tap to view details →"
@@ -9189,7 +9189,7 @@ const CoordinatorPortal = ({
     id: "evaldates",
     label: t.evalDates,
     icon: "📅"
-  }, { id: "excellence", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" },
+  }, { id: "excellence", label: lang === "ar" ? "فرق التميز" : "Excellence Teams", icon: "🏆" },
   { id: "reportsAdmin", label: lang === "ar" ? "التقارير" : "Reports", icon: "📊" },
   { id: "settings", label: lang === "ar" ? "الإعدادات" : "Settings", icon: "⚙️" }];
   const EmpCard = ({
@@ -9994,7 +9994,7 @@ const CoordinatorPortal = ({
         borderRadius: 7, padding: "3px 10px", marginBottom: 9,
         color: "#a78bfa", fontSize: 10, fontWeight: 800
       }
-    }, "\uD83C\uDFC6 ", lang === "ar" ? "من فرق الامتياز" : "From Excellence Teams",
+    }, "\uD83C\uDFC6 ", lang === "ar" ? "من فرق التميز" : "From Excellence Teams",
        a.teamNameAr || a.teamNameEn ? (" \u2022 " + (lang === "ar" ? (a.teamNameAr || "") : (a.teamNameEn || ""))) : ""
     ), /*#__PURE__*/React.createElement("div", {
       style: {
@@ -11290,7 +11290,7 @@ const ImportExportPanel = ({ achievements, employees, setEmployees, addAch, onUp
         { key: "emp", icon: "👥", titleAr: "معلومات الموظفين", titleEn: "Employee Information",
           descAr: "إضافة عدد كبير من الموظفين", descEn: "Add many employees at once",
           dl: dlEmpTemplate, up: upEmpFile, exp: exportEmployees, color: "#3b82f6" },
-        { key: "team", icon: "🏆", titleAr: "فرق الامتياز", titleEn: "Excellence Teams",
+        { key: "team", icon: "🏆", titleAr: "فرق التميز", titleEn: "Excellence Teams",
           descAr: "إضافة عدد كبير من الفرق", descEn: "Add many excellence teams",
           dl: dlTeamTemplate, up: upTeamFile, exp: exportTeams, color: "#8b5cf6" },
         { key: "eval", icon: "🗓️", titleAr: "التقييمات", titleEn: "Evaluations",
@@ -11579,7 +11579,7 @@ const AdminPortal = ({
     id: "evaldates",
     label: t.evalDates,
     icon: "📅"
-  }, { id: "excellence", label: lang === "ar" ? "فرق الامتياز" : "Excellence Teams", icon: "🏆" },
+  }, { id: "excellence", label: lang === "ar" ? "فرق التميز" : "Excellence Teams", icon: "🏆" },
   { id: "reportsAdmin", label: lang === "ar" ? "التقارير" : "Reports", icon: "📊" },
   { id: "import", label: lang === "ar" ? "استيراد/تصدير" : "Import/Export", icon: "📥" },
   { id: "settings", label: lang === "ar" ? "الإعدادات" : "Settings", icon: "⚙️" }];
@@ -12840,7 +12840,7 @@ const AdminPortal = ({
     },
       [
         { key: "achTeams", icon: "⭐",
-          titleAr: "حذف جميع الإنجازات وفرق الامتياز", titleEn: "Delete All Achievements & Teams",
+          titleAr: "حذف جميع الإنجازات وفرق التميز", titleEn: "Delete All Achievements & Teams",
           count: achievements.length + (excelTeams || []).length,
           countLabelAr: "إنجاز/فريق", countLabelEn: "records",
           onRun: onDeleteAllAchievementsTeams },
@@ -13790,7 +13790,7 @@ function App() {
     setExcelProjects([]);
     setExcelPendingChanges([]);
     addNotif('delete', lang === 'ar' ? 'حذف شامل' : 'Bulk delete',
-      lang === 'ar' ? 'تم حذف جميع الإنجازات وفرق الامتياز' : 'All achievements and excellence teams deleted');
+      lang === 'ar' ? 'تم حذف جميع الإنجازات وفرق التميز' : 'All achievements and excellence teams deleted');
   };
   const deleteAllEvaluations = () => {
     setEvalDates([]);
