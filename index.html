@@ -409,6 +409,17 @@ async function sbPost(t,b){
     return Array.isArray(d)?d[0]:d;
   }catch(e){console.error('[DB]POST',t,e);return null;}
 }
+async function sbUpsert(t,b,conflict){
+  // INSERT ... ON CONFLICT DO UPDATE (upsert). conflict = column name(s), default 'id'.
+  try{
+    const oc = conflict || 'id';
+    const H = Object.assign({}, SB_H, {'Prefer':'resolution=merge-duplicates,return=representation'});
+    const r=await fetch(SB_URL+'/rest/v1/'+t+'?on_conflict='+oc,{method:'POST',headers:H,body:JSON.stringify(b)});
+    if(!r.ok){console.error('[DB]UPSERT',t,r.status,await r.text());return null;}
+    const d=await r.json();
+    return Array.isArray(d)?d[0]:d;
+  }catch(e){console.error('[DB]UPSERT',t,e);return null;}
+}
 async function sbPatch(t,id,b){
   try{
     const r=await fetch(SB_URL+'/rest/v1/'+t+'?id=eq.'+id,{method:'PATCH',headers:SB_H,body:JSON.stringify(b)});
@@ -7675,10 +7686,13 @@ const EmployeePortal = ({
   const myRankIdx = fullRanking.findIndex(r => r.id === user.id);
   const nearMe = myRankIdx >= 0
     ? (() => {
-        let start = Math.max(0, myRankIdx - 2);
-        let end = Math.min(fullRanking.length, start + 5);
-        start = Math.max(0, end - 5); // ensure we always show up to 5
-        return fullRanking.slice(start, end);
+        // Exactly: 2 ranks above + the employee + 2 ranks below (competitive, not divisive)
+        const out = [];
+        for (let d = -2; d <= 2; d++) {
+          const idx = myRankIdx + d;
+          if (idx >= 0 && idx < fullRanking.length) out.push(fullRanking[idx]);
+        }
+        return out;
       })()
     : [];
   const sb = s => s === "approved" ? /*#__PURE__*/React.createElement(Badge, {
@@ -13666,13 +13680,13 @@ function App() {
     setExcelTeams(ts);
     if(!Array.isArray(ts))return;
     for(const t of ts){
-      await sbPost('excellence_teams',{id:t.id,name_ar:t.nameAr,name_en:t.nameEn||t.nameAr,
+      await sbUpsert('excellence_teams',{id:t.id,name_ar:t.nameAr,name_en:t.nameEn||t.nameAr,
         desc_ar:t.descAr||'',desc_en:t.descEn||'',lead_id:t.leadId||null,
         color:t.color||'#6366f1',icon:t.icon||'⭐'});
       const mem = t.memberIds !== undefined ? t.memberIds : t.members;
       if(mem!==undefined){
         await sbDelWhere('team_members','team_id',t.id);
-        if(mem.length>0)await sbPost('team_members',mem.map(id=>({team_id:t.id,emp_id:id})));
+        if(mem.length>0)await sbUpsert('team_members',mem.map(id=>({team_id:t.id,emp_id:id})),'team_id,emp_id');
       }
     }
   };
@@ -13681,7 +13695,7 @@ function App() {
     setExcelProjects(ps);
     if(!Array.isArray(ps))return;
     for(const p of ps){
-      await sbPost('excellence_projects',{id:p.id,name_ar:p.nameAr,name_en:p.nameEn||p.nameAr,
+      await sbUpsert('excellence_projects',{id:p.id,name_ar:p.nameAr,name_en:p.nameEn||p.nameAr,
         desc_ar:p.descAr||'',desc_en:p.descEn||'',status:p.status||'in_progress',
         progress:p.progress||0,project_lead_id:p.projectLeadId||null,
         start_date:p.startDate||null,due_date:p.dueDate||null,notes:p.notes||'',
@@ -13691,12 +13705,12 @@ function App() {
       if(pmembers){
         const uniqMembers = [...new Set(pmembers.filter(Boolean))];
         await sbDelWhere('project_members','project_id',p.id);
-        if(uniqMembers.length>0)await sbPost('project_members',uniqMembers.map(id=>({project_id:p.id,emp_id:id})));
+        if(uniqMembers.length>0)await sbUpsert('project_members',uniqMembers.map(id=>({project_id:p.id,emp_id:id})),'project_id,emp_id');
       }
       const pteamList = p.teamIds !== undefined ? p.teamIds : (p.teamId ? [p.teamId] : []);
       const uniqTeams = [...new Set(pteamList.filter(Boolean))];
       await sbDelWhere('project_teams','project_id',p.id);
-      if(uniqTeams.length>0)await sbPost('project_teams',uniqTeams.map(tid=>({project_id:p.id,team_id:tid})));
+      if(uniqTeams.length>0)await sbUpsert('project_teams',uniqTeams.map(tid=>({project_id:p.id,team_id:tid})),'project_id,team_id');
     }
   };
 // ===== END DB SYNC =====
