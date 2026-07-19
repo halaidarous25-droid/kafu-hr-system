@@ -8086,7 +8086,7 @@ const EmployeePortal = ({
     style: {
       color: "#a5b4fc"
     }
-  }, user.lastEval || "—", " ", t.to, " ", user.contractEnd || myYear)), /*#__PURE__*/React.createElement(PerfBadge, {
+  }, fmtDMY(user.lastEval) || "—", " ", t.to, " ", fmtDMY(user.contractEnd) || myYear)), /*#__PURE__*/React.createElement(PerfBadge, {
     pct: pct,
     pts: yearPts,
     maxPts: 50,
@@ -8124,12 +8124,12 @@ const EmployeePortal = ({
   }), /*#__PURE__*/React.createElement(Stat, {
     icon: "\uD83D\uDCC5",
     label: t.lastEval,
-    value: myEval?.evalDate || user.lastEval || "—",
+    value: fmtDMY(myEval?.evalDate || user.lastEval) || "—",
     color: "#ec4899"
   }), /*#__PURE__*/React.createElement(Stat, {
     icon: "\uD83D\uDD04",
     label: t.contractEnd,
-    value: user.contractEnd || "—",
+    value: fmtDMY(user.contractEnd) || "—",
     color: daysLeft !== null && daysLeft <= 90 ? "#ef4444" : "#06b6d4",
     sub: daysLeft !== null && daysLeft > 0 ? `${daysLeft} ${t.daysLeft}` : null
   })),
@@ -9594,7 +9594,7 @@ const CoordinatorPortal = ({
     style: {
       color: "#a5b4fc"
     }
-  }, user.lastEval || "—", " ", t.to, " ", user.contractEnd || myYear))), /*#__PURE__*/React.createElement("div", {
+  }, fmtDMY(user.lastEval) || "—", " ", t.to, " ", fmtDMY(user.contractEnd) || myYear))), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       gap: 8
@@ -9658,12 +9658,12 @@ const CoordinatorPortal = ({
   }), /*#__PURE__*/React.createElement(Stat, {
     icon: "\uD83D\uDCC5",
     label: t.lastEval,
-    value: myEval?.evalDate || user.lastEval || "—",
+    value: fmtDMY(myEval?.evalDate || user.lastEval) || "—",
     color: "#ec4899"
   }), /*#__PURE__*/React.createElement(Stat, {
     icon: "\uD83D\uDD04",
     label: t.contractEnd,
-    value: user.contractEnd || "—",
+    value: fmtDMY(user.contractEnd) || "—",
     color: daysLeft !== null && daysLeft <= 90 ? "#ef4444" : "#06b6d4",
     sub: daysLeft !== null && daysLeft > 0 ? `${daysLeft} ${t.daysLeft}` : null
   })), /*#__PURE__*/React.createElement("div", {
