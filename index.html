@@ -8897,6 +8897,7 @@ const EvalDatesPage = ({ evalDates, employees, achievements, onAddEval, onEditEv
   const isAr = lang === "ar";
   const [editing, setEditing] = React.useState(null);
   const [editYear, setEditYear] = React.useState("");
+  const [editModal, setEditModal] = React.useState(null); // full eval details editor
   const [fSearch, setFSearch] = React.useState("");
   const [fYear, setFYear] = React.useState("all");
   const [fAlert, setFAlert] = React.useState("all");
@@ -8920,6 +8921,67 @@ const EvalDatesPage = ({ evalDates, employees, achievements, onAddEval, onEditEv
   });
 
   return /*#__PURE__*/React.createElement("div", null,
+    // ── نافذة تعديل تفاصيل التقييم الكاملة ──
+    editModal && /*#__PURE__*/React.createElement("div", {
+      onClick: () => setEditModal(null),
+      style: { position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", zIndex: 9000,
+        display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }
+    },
+      /*#__PURE__*/React.createElement("div", {
+        onClick: ev => ev.stopPropagation(),
+        style: { background: th.bgSolid || th.card, border: "1px solid " + th.border, borderRadius: 16,
+          padding: 24, maxWidth: 460, width: "100%", maxHeight: "90vh", overflowY: "auto", direction: isAr ? "rtl" : "ltr" }
+      },
+        /*#__PURE__*/React.createElement("div", { style: { fontWeight: 900, fontSize: 16, color: th.text, marginBottom: 4 } },
+          isAr ? "✏️ تعديل تفاصيل التقييم" : "✏️ Edit Evaluation Details"),
+        /*#__PURE__*/React.createElement("div", { style: { fontSize: 11, color: th.textMuted, marginBottom: 16 } },
+          (() => { const emp = (employees || []).find(x => x.id === editModal.empId); return emp ? (isAr ? (emp.nameAr || emp.nameEn) : (emp.nameEn || emp.nameAr)) : (editModal.empId || ""); })()),
+        // تاريخ التقييم
+        /*#__PURE__*/React.createElement(Inp, {
+          label: isAr ? "تاريخ التقييم" : "Evaluation Date",
+          value: editModal.evalDate || "", type: "dateDMY",
+          onChange: v => setEditModal(m => Object.assign({}, m, { evalDate: v }))
+        }),
+        // تاريخ التقييم التالي
+        /*#__PURE__*/React.createElement(Inp, {
+          label: isAr ? "تاريخ التقييم التالي / تجديد العقد" : "Next Evaluation / Renewal",
+          value: editModal.nextEval || "", type: "dateDMY",
+          onChange: v => setEditModal(m => Object.assign({}, m, { nextEval: v }))
+        }),
+        // سنة التقييم
+        /*#__PURE__*/React.createElement(Inp, {
+          label: isAr ? "السنة التعاقدية" : "Contract Year",
+          value: editModal.evalYear || "",
+          onChange: v => setEditModal(m => Object.assign({}, m, { evalYear: v })),
+          placeholder: "2025-2026"
+        }),
+        // ملاحظات
+        /*#__PURE__*/React.createElement(Inp, {
+          label: isAr ? "ملاحظات" : "Notes",
+          value: editModal.notes || "", rows: 3,
+          onChange: v => setEditModal(m => Object.assign({}, m, { notes: v }))
+        }),
+        // أزرار
+        /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => {
+              onEditEval && onEditEval(editModal.id, {
+                evalDate: editModal.evalDate, nextEval: editModal.nextEval,
+                evalYear: editModal.evalYear, notes: editModal.notes
+              });
+              setEditModal(null);
+            },
+            style: { flex: 1, background: "#10b981", border: "none", borderRadius: 9, padding: "10px",
+              color: "#fff", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }
+          }, isAr ? "💾 حفظ" : "💾 Save"),
+          /*#__PURE__*/React.createElement("button", {
+            onClick: () => setEditModal(null),
+            style: { flex: 1, background: th.surface || "rgba(148,163,184,.15)", border: "1px solid " + th.border,
+              borderRadius: 9, padding: "10px", color: th.textMuted, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }
+          }, isAr ? "إلغاء" : "Cancel")
+        )
+      )
+    ),
     /*#__PURE__*/React.createElement("div", {
       style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16, alignItems: "center",
         background: th.card, border: "2px solid " + th.border, borderRadius: 12, padding: "10px 14px" }
@@ -9050,7 +9112,7 @@ const EvalDatesPage = ({ evalDates, employees, achievements, onAddEval, onEditEv
                               color: "#fff", fontSize: 11, fontWeight: 700, cursor: "pointer" }
                           }, isAr ? "حفظ" : "Save")
                         : /*#__PURE__*/React.createElement("button", {
-                            onClick: () => { setEditing(rec.id); setEditYear(rec.evalYear); },
+                            onClick: () => { setEditModal(Object.assign({}, rec)); },
                             style: { background: "rgba(99,102,241,.15)", border: "1px solid rgba(99,102,241,.3)",
                               borderRadius: 7, padding: "5px 10px", color: "#a5b4fc", fontSize: 11, fontWeight: 700, cursor: "pointer" }
                           }, canEdit ? "✏️" : (isAr ? "✏️ السنة" : "✏️ Year")),
